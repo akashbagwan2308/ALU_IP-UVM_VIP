@@ -1,2 +1,0 @@
-  CREATE_STREAM @0 {NAME:wr_seq T:Transactions SCOPE:uvm_test_top.env.apb_agt.sequencer STREAM:800}
-  CREATE_STREAM @75000 {NAME:rd_seq T:Transactions SCOPE:uvm_test_top.env.apb_agt.sequencer STREAM:853}
