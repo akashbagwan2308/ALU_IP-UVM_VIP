@@ -1,1 +1,0 @@
-"work.tb_top" -s "simv" -timescale "1ns/1ns" 
