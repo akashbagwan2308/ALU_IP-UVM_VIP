@@ -1,0 +1,3 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/tb_top.sv" into library work
+INFO: [VRFC 10-311] analyzing module tb_top
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/UVM/1.2/src/uvm_pkg.sv" into library work

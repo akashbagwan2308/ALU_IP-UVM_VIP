@@ -1,0 +1,120 @@
+#-----------------------------------------------------------
+# xsim v2025.1 (64-bit)
+# SW Build 6140274 on Thu May 22 00:12:29 MDT 2025
+# IP Build 6138677 on Thu May 22 03:10:11 MDT 2025
+# SharedData Build 6139179 on Tue May 20 17:58:58 MDT 2025
+# Start of session at: Sun Jul 26 20:16:57 2026
+# Process ID         : 15052
+# Current directory  : C:/Users/akash/Downloads/alu_uvm_ip_vip
+# Command line       : xsim.exe -mode tcl -source {xsim.dir/simv/xsim_script.tcl}
+# Log file           : C:/Users/akash/Downloads/alu_uvm_ip_vip/xsim.log
+# Journal file       : C:/Users/akash/Downloads/alu_uvm_ip_vip\xsim.jou
+# Running On         : Lenovo_Akash
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26200
+# Processor Detail   : AMD Ryzen 5 3500U with Radeon Vega Mobile Gfx  
+# CPU Frequency      : 2096 MHz
+# CPU Physical cores : 4
+# CPU Logical cores  : 8
+# Host memory        : 10607 MB
+# Swap memory        : 5192 MB
+# Total Virtual      : 15799 MB
+# Available Virtual  : 2367 MB
+#-----------------------------------------------------------
+source xsim.dir/simv/xsim_script.tcl
+# xsim {simv} -autoloadwcfg -runall
+Time resolution is 1 ps
+run -all
+UVM_INFO D:Vivÿÿÿ‚5.1Vivadodata/system_verilog/uvm_1.2/xlnx_uvm_package.sv(18601) @ 0: reporter [UVM/RELNOTES] 
+----------------------------------------------------------------
+UVM-1.2
+(C) 2007-2014 Mentor Graphics Corporation
+(C) 2007-2014 Cadence Design Systems, Inc.
+(C) 2006-2014 Synopsys, Inc.
+(C) 2011-2013 Cypress Semiconductor Corp.
+(C) 2013-2014 NVIDIA Corporation
+----------------------------------------------------------------
+
+  ***********       IMPORTANT RELEASE NOTES         ************
+
+  You are using a version of the UVM library that has been compiled
+  with `UVM_NO_DEPRECATED undefined.
+
+  You are using a version of the UVM library that has been compiled
+  with `UVM_OBJECT_DO_NOT_NEED_CONSTRUCTOR undefined.
+
+      (Specify +UVM_NO_RELNOTES to turn off this notice)
+
+UVM_INFO @ 0: reporter [RNTST] Running test alu_reg_test...
+UVM_INFO D:Vivÿÿÿ‚5.1Vivadodata/system_verilog/uvm_1.2/xlnx_uvm_package.sv(20867) @ 0: reporter [UVM/COMP/NAMECHECK] This implementation of the component name checks requires DPI to be enabled
+UVM_INFO C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(22) @ 0: uvm_test_top [REG_TEST] --- STARTING REGISTER INTEGRITY TEST ---
+*********************Topology******************************
+UVM_INFO D:Vivÿÿÿ‚5.1Vivadodata/system_verilog/uvm_1.2/xlnx_uvm_package.sv(18752) @ 1000: reporter [UVMTOP] UVM testbench topology:
+------------------------------------------------------------------------------
+Name                         Type                    Size  Value              
+------------------------------------------------------------------------------
+uvm_test_top                 alu_reg_test            -     @341               
+  env                        uvm_env                 -     @361               
+    apb_agt                  uvm_agent               -     @375               
+      ap                     uvm_analysis_port       -     @583               
+      driver                 uvm_driver #(REQ,RSP)   -     @593               
+        rsp_port             uvm_analysis_port       -     @612               
+        seq_item_port        uvm_seq_item_pull_port  -     @602               
+      monitor                uvm_monitor             -     @564               
+        item_collected_port  uvm_analysis_port       -     @573               
+      sequencer              uvm_sequencer           -     @622               
+        rsp_export           uvm_analysis_export     -     @631               
+        seq_item_export      uvm_seq_item_pull_imp   -     @749               
+        arbitration_queue    array                   1     -                  
+          [0]                string                  19    SEQ_TYPE_REQ@seqid1
+        lock_queue           array                   0     -                  
+        num_last_reqs        integral                32    'd1                
+        num_last_rsps        integral                32    'd1                
+    cov                      uvm_component           -     @540               
+      analysis_imp           uvm_analysis_imp        -     @549               
+    scbd                     uvm_scoreboard          -     @521               
+      item_collected_export  uvm_analysis_imp        -     @530               
+    v_sqr                    uvm_sequencer           -     @384               
+      rsp_export             uvm_analysis_export     -     @393               
+      seq_item_export        uvm_seq_item_pull_imp   -     @511               
+      arbitration_queue      array                   0     -                  
+      lock_queue             array                   0     -                  
+      num_last_reqs          integral                32    'd1                
+      num_last_rsps          integral                32    'd1                
+------------------------------------------------------------------------------
+
+UVM_ERROR C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(35) @ 105000: uvm_test_top [REG_TEST] Mismatch on OPERAND_A! Wrote: 0xaa, Read: 0x0
+UVM_INFO C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(51) @ 165000: uvm_test_top [REG_TEST] OPERAND_B matched pattern 0xaa
+UVM_ERROR C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(35) @ 225000: uvm_test_top [REG_TEST] Mismatch on OPERAND_A! Wrote: 0x55, Read: 0xaa
+UVM_INFO C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(51) @ 285000: uvm_test_top [REG_TEST] OPERAND_B matched pattern 0x55
+UVM_ERROR C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(35) @ 345000: uvm_test_top [REG_TEST] Mismatch on OPERAND_A! Wrote: 0xff, Read: 0x55
+UVM_INFO C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(51) @ 405000: uvm_test_top [REG_TEST] OPERAND_B matched pattern 0xff
+UVM_ERROR C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(35) @ 465000: uvm_test_top [REG_TEST] Mismatch on OPERAND_A! Wrote: 0x0, Read: 0xff
+UVM_INFO C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(51) @ 525000: uvm_test_top [REG_TEST] OPERAND_B matched pattern 0x0
+UVM_INFO C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../tests/alu_reg_test.sv(54) @ 525000: uvm_test_top [REG_TEST] --- REGISTER INTEGRITY TEST COMPLETE ---
+UVM_INFO D:Vivÿÿÿ‚5.1Vivadodata/system_verilog/uvm_1.2/xlnx_uvm_package.sv(19968) @ 575000: reporter [TEST_DONE] 'run' phase is ready to proceed to the 'extract' phase
+UVM_INFO C:/Users/akash/Downloads/alu_uvm_ip_vip/tb/top/../scoreboard/alu_scoreboard.sv(58) @ 575000: uvm_test_top.env.scbd [SCBD_REPORT] 
+--- SCOREBOARD SUMMARY ---
+PASSED: 0
+FAILED: 0
+--------------------------
+UVM_INFO D:Vivÿÿÿ‚5.1Vivadodata/system_verilog/uvm_1.2/xlnx_uvm_package.sv(13673) @ 575000: reporter [UVM/REPORT/SERVER] 
+--- UVM Report Summary ---
+
+** Report counts by severity
+UVM_INFO :   12
+UVM_WARNING :    0
+UVM_ERROR :    4
+UVM_FATAL :    0
+** Report counts by id
+[REG_TEST]    10
+[RNTST]     1
+[SCBD_REPORT]     1
+[TEST_DONE]     1
+[UVM/COMP/NAMECHECK]     1
+[UVM/RELNOTES]     1
+[UVMTOP]     1
+
+$finish called at time : 575 ns : File "D:\Vivado\2025.1\Vivado\data/system_verilog/uvm_1.2/xlnx_uvm_package.sv" Line 18699
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Jul 26 20:17:10 2026...

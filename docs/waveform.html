@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogicSilicon WaveViewer Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="favicon.png">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+        .code-font { font-family: 'Fira Code', monospace; }
+        
+        #viewer-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        #signal-list {
+            width: 240px; /* Reduced from 340px for better split-screen support */
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 20;
+            background-color: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.03);
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .dark #signal-list {
+            background-color: #0f172a;
+            border-right: 1px solid #1e293b;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.3);
+        }
+        
+        .signal-header {
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            background-color: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background-color 0.2s, border-color 0.2s;
+            position: relative;
+        }
+        .dark .signal-header {
+            background-color: #1e293b;
+            border-bottom: 1px solid #334155;
+        }
+        
+        #signal-list-scroll {
+            overflow-y: hidden; 
+            flex: 1;
+        }
+
+        .signal-item {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px 0 12px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background-color 0.1s;
+            cursor: grab;
+        }
+        
+        .signal-item:nth-child(even) { background-color: rgba(0, 0, 0, 0.02); }
+        .dark .signal-item:nth-child(even) { background-color: rgba(255, 255, 255, 0.015); }
+        .dark .signal-item { border-bottom: 1px solid #1e293b; }
+        .signal-item:hover { background-color: rgba(0, 0, 0, 0.05) !important; }
+        .dark .signal-item:hover { background-color: #1e293b !important; }
+        .signal-item:active { cursor: grabbing; }
+        .signal-item.drag-over { border-top: 2px solid #4f46e5; background-color: rgba(79, 70, 229, 0.05) !important; }
+        .dark .signal-item.drag-over { border-top: 2px solid #6366f1; background-color: rgba(99, 102, 241, 0.1) !important; }
+        .signal-item.dragging { opacity: 0.4; }
+
+        #sidebar-resizer {
+            width: 4px;
+            cursor: col-resize;
+            background-color: transparent;
+            position: relative;
+            z-index: 30;
+        }
+        #sidebar-resizer::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0; left: 1px; right: 1px;
+            background-color: #e2e8f0;
+            transition: background-color 0.2s;
+        }
+        .dark #sidebar-resizer::after { background-color: #334155; }
+        #sidebar-resizer:hover::after, #sidebar-resizer.active::after { background-color: #4f46e5; }
+        .dark #sidebar-resizer:hover::after, .dark #sidebar-resizer.active::after { background-color: #6366f1; }
+
+        .sig-name-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .sig-val {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            min-width: 30px;
+            text-align: center;
+            border: 1px solid transparent;
+        }
+        
+        .val-1 { color: #059669; border-color: #10b981; background: rgba(16, 185, 129, 0.15); }
+        .val-0 { color: #475569; border-color: #cbd5e1; background: #ffffff; }
+        .val-x { color: #dc2626; border-color: #f87171; background: rgba(239, 68, 68, 0.15); }
+        .val-z { color: #d97706; border-color: #facc15; background: rgba(234, 179, 8, 0.15); }
+        .val-bus { color: #2563eb; border-color: #60a5fa; background: rgba(59, 130, 246, 0.15); }
+
+        .dark .val-1 { color: #10b981; border-color: #059669; background: rgba(16, 185, 129, 0.1); }
+        .dark .val-0 { color: #94a3b8; border-color: #334155; background: #020617; }
+        .dark .val-x { color: #ef4444; border-color: #dc2626; background: rgba(239, 68, 68, 0.1); }
+        .dark .val-z { color: #eab308; border-color: #ca8a04; background: rgba(234, 179, 8, 0.1); }
+        .dark .val-bus { color: #3b82f6; border-color: #2563eb; background: rgba(59, 130, 246, 0.1); }
+
+        .remove-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .signal-item:hover .remove-btn {
+            opacity: 1;
+        }
+
+        #canvas-wrapper {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            cursor: crosshair;
+            background-color: #ffffff;
+            transition: background-color 0.2s;
+        }
+        .dark #canvas-wrapper { background-color: #020617; }
+
+        #timeline-canvas {
+            position: sticky;
+            top: 0;
+            z-index: 15;
+            border-bottom: 1px solid #e2e8f0;
+            transition: border-color 0.2s;
+        }
+        .dark #timeline-canvas { border-bottom: 1px solid #1e293b; }
+        
+        #wave-container {
+            position: relative;
+            min-height: 100%;
+        }
+
+        #wave-canvas {
+            position: absolute;
+            top: 0; left: 0; z-index: 1;
+        }
+
+        #cursor-canvas {
+            position: absolute;
+            top: 0; left: 0; z-index: 10;
+            pointer-events: none;
+        }
+        
+        ::-webkit-scrollbar { height: 14px; width: 14px; }
+        ::-webkit-scrollbar-track { background: #f8fafc; border-left: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0;}
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 7px; border: 3px solid #f8fafc; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .dark ::-webkit-scrollbar-track { background: #020617; border-left: 1px solid #1e293b; border-top: 1px solid #1e293b;}
+        .dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 7px; border: 3px solid #020617; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-white text-slate-800 dark:bg-[#020617] dark:text-slate-100 transition-colors duration-200" onclick="hideAddSignalMenu()">
+
+    <header class="min-h-[4rem] py-2 bg-white dark:bg-[#0f172a] flex flex-wrap items-center justify-between px-4 shrink-0 shadow-sm dark:shadow-md border-b border-slate-200 dark:border-transparent z-30 transition-colors gap-y-3">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-black text-xs sm:text-sm shadow-[0_0_15px_rgba(79,70,229,0.3)] dark:shadow-[0_0_15px_rgba(79,70,229,0.5)]">LS</div>
+            <div>
+                <div class="font-bold text-[13px] sm:text-[15px] tracking-tight text-slate-900 dark:text-white">WaveViewer <span class="text-indigo-600 dark:text-indigo-400 font-normal italic">Pro</span></div>
+                <div class="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-widest uppercase flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span id="timescale-display">Timescale: --</span> 
+                    <span class="text-slate-300 dark:text-slate-600">|</span> 
+                    <span class="text-indigo-600 dark:text-indigo-400 font-bold">Cursor: <span id="cursor-time-display">0</span></span>
+                    <span class="text-slate-300 dark:text-slate-600 hidden lg:inline">|</span> 
+                    <span class="text-emerald-600 dark:text-emerald-400 hidden lg:inline">Left-Click: Anchor</span>
+                    <span class="text-slate-300 dark:text-slate-600 hidden xl:inline">|</span> 
+                    <span class="text-amber-600 dark:text-amber-400 hidden xl:inline">Shift+Drag: Pan</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-2">
+            <input type="file" id="vcd-file-input" accept=".vcd" class="hidden" onchange="handleFileUpload(event)">
+
+            <button onclick="autoLoadVCD()" class="px-2.5 h-[30px] sm:h-[34px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/80 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Sync Local dump.vcd">
+                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span class="hidden sm:inline">Sync</span>
+            </button>
+
+            <button onclick="document.getElementById('vcd-file-input').click()" class="px-2.5 h-[30px] sm:h-[34px] bg-slate-50 dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-[#334155] rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Upload Local VCD File">
+                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span class="hidden sm:inline">Upload</span>
+            </button>
+
+            <button onclick="exportWaveformPNG()" class="px-2.5 h-[30px] sm:h-[34px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/80 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Export High-Res Image for Reports">
+                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span class="hidden lg:inline">Snapshot</span>
+            </button>
+
+            <div class="bg-slate-50 dark:bg-[#1e293b] p-0.5 sm:p-1 rounded-lg border border-slate-200 dark:border-[#334155] flex items-center transition-colors h-[30px] sm:h-[34px] shadow-sm">
+                <select id="global-radix" onchange="changeGlobalRadix(this.value)" class="bg-transparent text-slate-700 dark:text-slate-300 text-[10px] sm:text-[11px] font-bold rounded outline-none cursor-pointer px-1 appearance-none text-center">
+                    <option value="hex">HEX</option>
+                    <option value="udec">DEC</option>
+                    <option value="bin">BIN</option>
+                </select>
+            </div>
+
+            <div class="bg-slate-50 dark:bg-[#1e293b] p-0.5 sm:p-1 rounded-lg border border-slate-200 dark:border-[#334155] flex gap-0.5 transition-colors h-[30px] sm:h-[34px]">
+                <button onclick="zoom(1.5)" class="px-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition" title="Zoom In">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                </button>
+                <button onclick="zoom(1/1.5)" class="px-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 transition" title="Zoom Out">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path></svg>
+                </button>
+                <div class="w-px bg-slate-200 dark:bg-slate-600 my-1 mx-0.5 transition-colors"></div>
+                <button onclick="fitToScreen()" class="px-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-xs font-bold text-slate-600 dark:text-slate-300 transition flex items-center gap-1" title="Fit to Screen">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                </button>
+            </div>
+            
+            <button onclick="toggleTheme(event)" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors" title="Toggle Theme">
+                <svg id="icon-sun" class="w-4 h-4 sm:w-5 sm:h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg id="icon-moon" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+            
+            <button onclick="window.close()" class="hidden 2xl:block px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-white transition shadow-sm">
+                Close
+            </button>
+        </div>
+    </header>
+
+    <div id="error-msg" class="hidden m-auto text-center p-10 max-w-lg">
+        <div class="text-5xl mb-6">📭</div>
+        <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-3">No Waveform Data Found</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">Please return to the LogicSilicon Simulator, ensure your testbench contains <code class="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-transparent">$dumpfile("dump.vcd"); $dumpvars;</code>, and click <strong>Run Code</strong> to generate a new waveform.</p>
+        
+        <div class="flex gap-3 justify-center">
+            <button onclick="autoLoadVCD()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition shadow-md flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Sync dump.vcd
+            </button>
+            <button onclick="document.getElementById('vcd-file-input').click()" class="px-5 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold transition shadow-md flex items-center justify-center gap-2">
+                Browse Manual
+            </button>
+        </div>
+    </div>
+
+    <div id="viewer-container" class="hidden">
+        <div id="signal-list">
+            <div class="signal-header text-[9px] font-bold text-slate-500 dark:text-slate-400 tracking-widest uppercase">
+                <div class="flex items-center gap-1.5">
+                    <span>Signals</span>
+                    <button onclick="toggleFullPath(event)" id="btn-path-toggle" class="w-4 h-4 rounded hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors" title="Toggle Full Hierarchical Path">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    </button>
+                    <button onclick="showAddSignalMenu(event)" class="w-4 h-4 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-300 font-extrabold transition-colors shadow-sm" title="Add Components (Signals / Dividers / Groups)">+</button>
+                </div>
+                <span class="mr-[45px]">Vals</span>
+
+                <div id="add-signal-menu" class="hidden absolute top-8 left-4 w-48 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1.5 overflow-y-auto max-h-72 normal-case tracking-normal font-medium shadow-[0_10px_25px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_25px_rgba(0,0,0,0.4)]">
+                </div>
+            </div>
+            <div id="signal-list-scroll">
+                <div id="signal-names-container" class="py-1"></div>
+            </div>
+        </div>
+
+        <div id="sidebar-resizer"></div>
+
+        <div id="canvas-wrapper">
+            <canvas id="timeline-canvas" height="32"></canvas>
+            <div id="wave-container">
+                <canvas id="wave-canvas"></canvas>
+                <canvas id="cursor-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. STATE & THEME MANAGEMENT ---
+        let parsedData = { signals: [], maxTime: 0, timescale: '1s' };
+        
+        let visibleSignals = [];
+        
+        let scale = 10;
+        const paddingX = 20; 
+        const rowHeight = 40;
+        const waveHeight = 24;
+        const paddingY = (rowHeight - waveHeight) / 2;
+        
+        // Fast hover paradigm state
+        let hoverTime = 0;   
+        let anchorTime = null; 
+        
+        let isPanning = false;
+        let startX = 0;
+        let scrollLeft = 0;
+        
+        let isDarkMode = false;
+        let globalRadix = 'hex'; 
+        let showFullPath = false;
+
+        const waveCanvas = document.getElementById('wave-canvas');
+        const cursorCanvas = document.getElementById('cursor-canvas');
+        const timeCanvas = document.getElementById('timeline-canvas');
+        const waveCtx = waveCanvas.getContext('2d');
+        const cursorCtx = cursorCanvas.getContext('2d');
+        const timeCtx = timeCanvas.getContext('2d');
+        const wrapper = document.getElementById('canvas-wrapper');
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('ls_theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                isDarkMode = true;
+                document.documentElement.classList.add('dark');
+            } else {
+                isDarkMode = false;
+                document.documentElement.classList.remove('dark');
+            }
+            updateThemeIcons();
+        }
+
+        function toggleTheme(e) {
+            if(e) e.stopPropagation();
+            isDarkMode = !isDarkMode;
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('ls_theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('ls_theme', 'light');
+            }
+            updateThemeIcons();
+            draw(); 
+        }
+        
+        function updateThemeIcons() {
+            if (isDarkMode) {
+                document.getElementById('icon-moon').classList.add('hidden');
+                document.getElementById('icon-sun').classList.remove('hidden');
+            } else {
+                document.getElementById('icon-sun').classList.add('hidden');
+                document.getElementById('icon-moon').classList.remove('hidden');
+            }
+        }
+
+        function getColors() {
+            if (isDarkMode) {
+                return {
+                    timelineBg: '#0f172a', timelineText: '#94a3b8', timelineTick: '#334155',
+                    gridLines: 'rgba(255, 255, 255, 0.05)', rowAltBg: 'rgba(255, 255, 255, 0.015)', 
+                    cursorLine: 'rgba(255,255,255,0.4)',
+                    val1: '#22c55e', val1Fill: 'rgba(34, 197, 94, 0.12)', val0: '#22c55e',
+                    valX: '#ef4444', valXFill: 'rgba(239, 68, 68, 0.15)', valZ: '#eab308',
+                    valBus: '#3b82f6', busTextVal: '#cbd5e1', busTextX: '#ef4444', anchor: '#eab308',
+                    deltaLine: 'rgba(99, 102, 241, 0.9)', deltaBg: '#4f46e5', deltaText: '#fff',
+                    dividerBg: '#1e293b', dividerText: '#cbd5e1', groupBg: '#111827', groupText: '#6366f1'
+                };
+            } else {
+                return {
+                    timelineBg: '#f1f5f9', timelineText: '#64748b', timelineTick: '#cbd5e1',
+                    gridLines: 'rgba(0, 0, 0, 0.08)', rowAltBg: 'rgba(0, 0, 0, 0.03)', 
+                    cursorLine: 'rgba(0,0,0,0.4)',
+                    val1: '#059669', val1Fill: 'rgba(16, 185, 129, 0.15)', val0: '#059669',
+                    valX: '#dc2626', valXFill: 'rgba(220, 38, 38, 0.1)', valZ: '#d97706',
+                    valBus: '#2563eb', busTextVal: '#1e293b', busTextX: '#dc2626', anchor: '#d97706',
+                    deltaLine: 'rgba(79, 70, 229, 0.7)', deltaBg: '#e0e7ff', deltaText: '#4f46e5',
+                    dividerBg: '#e2e8f0', dividerText: '#475569', groupBg: '#f1f5f9', groupText: '#4f46e5'
+                };
+            }
+        }
+
+        function getFlatRenderList() {
+            let flat = [];
+            let hiddenGroupIds = new Set();
+            visibleSignals.forEach(item => {
+                if (item.type === 'group' && item.collapsed) {
+                    hiddenGroupIds.add(item.id);
+                }
+                if (item.parentGroupId && hiddenGroupIds.has(item.parentGroupId)) {
+                    return; 
+                }
+                flat.push(item);
+            });
+            return flat;
+        }
+
+        // --- AUTO-LOAD VCD LOGIC ---
+        async function autoLoadVCD() {
+            try {
+                // Fetch the VCD file from the same directory with cache busting
+                const response = await fetch('dump.vcd?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("File not found");
+                
+                const vcdContent = await response.text();
+                
+                // Reset state for fresh render
+                parsedData = { signals: [], maxTime: 0, timescale: '1s' };
+                visibleSignals = [];
+                hoverTime = 0;
+                anchorTime = null;
+                
+                parseVCD(vcdContent);
+                
+                document.getElementById('error-msg').classList.add('hidden');
+                document.getElementById('viewer-container').classList.remove('hidden');
+                
+                visibleSignals = parsedData.signals.map(s => ({ type: 'signal', signal: s, parentGroupId: null }));
+                document.getElementById('timescale-display').innerText = `Timescale: ${parsedData.timescale}`;
+
+                let startingWidth = wrapper.clientWidth;
+                if (startingWidth === 0) startingWidth = window.innerWidth - document.getElementById('signal-list').clientWidth; 
+                
+                scale = (startingWidth - 50 - paddingX) / Math.max(1, parsedData.maxTime);
+                if (scale > 50) scale = 50;
+
+                initRenderer();
+                setupSidebarResizer();
+                requestAnimationFrame(() => { fitToScreen(); });
+                
+            } catch (error) {
+                console.log("Auto-load failed. Is dump.vcd in the same folder?", error);
+                document.getElementById('error-msg').classList.remove('hidden');
+                document.getElementById('viewer-container').classList.add('hidden');
+            }
+        }
+
+        window.onload = () => {
+            initTheme();
+            autoLoadVCD(); // Attempt automatic load immediately
+        };
+
+        window.handleFileUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const vcdContent = e.target.result;
+                
+                parsedData = { signals: [], maxTime: 0, timescale: '1s' };
+                visibleSignals = [];
+                hoverTime = 0;
+                anchorTime = null;
+                
+                parseVCD(vcdContent);
+                
+                document.getElementById('error-msg').classList.add('hidden');
+                document.getElementById('viewer-container').classList.remove('hidden');
+                
+                visibleSignals = parsedData.signals.map(s => ({ type: 'signal', signal: s, parentGroupId: null }));
+                document.getElementById('timescale-display').innerText = `Timescale: ${parsedData.timescale}`;
+
+                let startingWidth = wrapper.clientWidth;
+                if (startingWidth === 0) startingWidth = window.innerWidth - document.getElementById('signal-list').clientWidth; 
+                
+                scale = (startingWidth - 50 - paddingX) / Math.max(1, parsedData.maxTime);
+                if (scale > 50) scale = 50;
+
+                initRenderer();
+                setupSidebarResizer();
+                requestAnimationFrame(() => { fitToScreen(); });
+            };
+
+            reader.readAsText(file);
+            event.target.value = ''; 
+        };
+
+        window.toggleFullPath = function(e) {
+            e.stopPropagation();
+            showFullPath = !showFullPath;
+            const btn = document.getElementById('btn-path-toggle');
+            if(showFullPath) {
+                btn.classList.add('bg-indigo-100', 'dark:bg-indigo-900', 'text-indigo-600', 'dark:text-indigo-400');
+            } else {
+                btn.classList.remove('bg-indigo-100', 'dark:bg-indigo-900', 'text-indigo-600', 'dark:text-indigo-400');
+            }
+            initRenderer();
+        };
+
+        // --- 2. VCD PARSER ---
+        function parseVCD(vcd) {
+            const lines = vcd.split('\n');
+            let varsMap = {}; 
+            let currentScope = [];
+            let currentTime = 0;
+            let timescale = '';
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+
+                if (line.startsWith('$timescale')) {
+                    const match = vcd.match(/\$timescale\s+([^$]+)\s+\$end/);
+                    if (match) timescale = match[1].trim();
+                } else if (line.startsWith('$scope')) {
+                    const parts = line.split(/\s+/);
+                    currentScope.push(parts[2]);
+                } else if (line.startsWith('$upscope')) {
+                    currentScope.pop();
+                } else if (line.startsWith('$var')) {
+                    const parts = line.split(/\s+/);
+                    const type = parts[1];
+                    const size = parseInt(parts[2]);
+                    const id = parts[3];
+                    const name = parts[4];
+                    const fullName = currentScope.join('.') + '.' + name;
+                    
+                    if (!varsMap[id]) varsMap[id] = { transitions: [] };
+                    
+                    parsedData.signals.push({ 
+                        id, name: fullName, size, type, 
+                        transitions: varsMap[id].transitions 
+                    });
+                } else if (line.startsWith('$dumpvars') || line.startsWith('$enddefinitions')) {
+                    break;
+                }
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+                if (line.startsWith('$dumpvars') || line.startsWith('$enddefinitions') || line.startsWith('$end')) continue; 
+
+                if (line.startsWith('#')) {
+                    currentTime = parseInt(line.substring(1));
+                } else if (/^[01xzXZbB]/.test(line)) {
+                    let valStr = ''; let id = '';
+                    if (line.startsWith('b') || line.startsWith('B')) {
+                        const parts = line.split(/\s+/);
+                        valStr = parts[0].substring(1); id = parts[1];
+                    } else {
+                        valStr = line[0]; id = line.substring(1).trim();
+                    }
+                    if (varsMap[id]) varsMap[id].transitions.push({ time: currentTime, val: valStr });
+                }
+            }
+
+            parsedData.signals.forEach(sig => {
+                if (sig.transitions.length === 0 || sig.transitions[0].time !== 0) {
+                    sig.transitions.unshift({ time: 0, val: sig.size > 1 ? 'x' : 'x' });
+                }
+            });
+
+            parsedData.maxTime = currentTime > 0 ? currentTime + Math.max(10, currentTime * 0.05) : 100;
+            parsedData.timescale = timescale;
+        }
+
+        // --- 3. DELTA TIME ENGINE ---
+        function getFrequencyString(deltaTicks) {
+            if (deltaTicks === 0) return '';
+            
+            let timescaleValue = 1;
+            let timescaleUnit = 's';
+            if (parsedData.timescale) {
+                const match = parsedData.timescale.match(/(\d+)\s*([a-zA-Z]+)/);
+                if (match) {
+                    timescaleValue = parseInt(match[1]);
+                    timescaleUnit = match[2].toLowerCase();
+                }
+            }
+            
+            const multipliers = { 's': 1, 'ms': 1e-3, 'us': 1e-6, 'ns': 1e-9, 'ps': 1e-12, 'fs': 1e-15 };
+            const unitMult = multipliers[timescaleUnit] || 1;
+            const deltaSeconds = deltaTicks * timescaleValue * unitMult;
+            const freqHz = 1 / deltaSeconds;
+
+            if (!isFinite(freqHz)) return '';
+            if (freqHz >= 1e9) return (freqHz / 1e9).toFixed(2) + ' GHz';
+            if (freqHz >= 1e6) return (freqHz / 1e6).toFixed(2) + ' MHz';
+            if (freqHz >= 1e3) return (freqHz / 1e3).toFixed(2) + ' kHz';
+            return freqHz.toFixed(2) + ' Hz';
+        }
+
+        function getDeltaTimeText(deltaTicks) {
+            let timescaleValue = 1;
+            let timescaleUnit = 's';
+            if (parsedData.timescale) {
+                const match = parsedData.timescale.match(/(\d+)\s*([a-zA-Z]+)/);
+                if (match) {
+                    timescaleValue = parseInt(match[1]);
+                    timescaleUnit = match[2];
+                }
+            }
+            const val = parseFloat((deltaTicks * timescaleValue).toPrecision(10));
+            return `${val} ${timescaleUnit}`;
+        }
+
+        // --- 4. SIDEBAR POLYMORPHIC RENDERER ---
+        function initRenderer() {
+            const namesContainer = document.getElementById('signal-names-container');
+            namesContainer.innerHTML = '';
+            
+            const activeItems = getFlatRenderList();
+            
+            activeItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.draggable = true; 
+                
+                div.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); div.classList.add('dragging'); };
+                div.ondragend = () => { div.classList.remove('dragging'); };
+                div.ondragover = (e) => { e.preventDefault(); div.classList.add('drag-over'); };
+                div.ondragleave = () => { div.classList.remove('drag-over'); };
+                div.ondrop = (e) => {
+                    e.preventDefault();
+                    div.classList.remove('drag-over');
+                    const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                    if (fromIdx !== index && !isNaN(fromIdx)) {
+                        const movedItem = activeItems[fromIdx];
+                        const targetItem = activeItems[index];
+                        const trueFrom = visibleSignals.indexOf(movedItem);
+                        const trueTarget = visibleSignals.indexOf(targetItem);
+                        
+                        const element = visibleSignals.splice(trueFrom, 1)[0];
+                        visibleSignals.splice(trueTarget, 0, element);
+                        initRenderer(); 
+                    }
+                };
+
+                if (item.type === 'signal') {
+                    div.className = `signal-item code-font`;
+                    
+                    const sig = item.signal;
+                    const shortName = sig.name.split('.').pop();
+                    const displayName = showFullPath ? sig.name : shortName;
+                    const initVal = getValueAtTime(sig, hoverTime);
+                    const isIndented = item.parentGroupId ? 'pl-6' : 'pl-2';
+
+                    div.innerHTML = `
+                        <div class="sig-name-container pointer-events-none ${isIndented}">
+                            <span class="text-slate-300 dark:text-slate-600 mr-0.5 text-[10px]" title="Drag row to sort">⋮</span>
+                            <span class="text-slate-400 dark:text-slate-500 text-[8px] w-5 shrink-0">[${sig.size}]</span> 
+                            <span class="text-slate-800 dark:text-indigo-200 truncate font-semibold text-xs" title="${sig.name}">${displayName}</span>
+                        </div>
+                        <div class="flex items-center gap-1 pointer-events-auto shrink-0">
+                            <div id="val-badge-${index}" class="sig-val ${getValueClass(initVal, sig.size)} pointer-events-none">
+                                ${formatDisplayValue(initVal, sig.size)}
+                            </div>
+                            <button onclick="event.stopPropagation(); removeItem(${index})" class="remove-btn text-slate-400 hover:text-red-500 p-0.5" title="Hide Trace">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                } else if (item.type === 'divider') {
+                    div.className = 'h-10 border-b border-slate-200 dark:border-[#1e293b] bg-slate-100/70 dark:bg-slate-900/60 flex items-center justify-between px-3 font-bold text-[10px] text-slate-500 dark:text-slate-400 tracking-wider uppercase';
+                    div.innerHTML = `
+                        <span class="truncate">${item.label}</span>
+                        <button onclick="removeItem(${index})" class="text-slate-400 hover:text-red-500 font-normal normal-case text-xs">Rm</button>
+                    `;
+                } else if (item.type === 'group') {
+                    div.className = 'h-10 border-b border-slate-200 dark:border-[#1e293b] bg-slate-200/50 dark:bg-slate-900 flex items-center justify-between px-3 font-bold text-xs text-indigo-600 dark:text-indigo-400';
+                    const symbol = item.collapsed ? '►' : '▼';
+                    div.innerHTML = `
+                        <div class="flex items-center gap-1.5 cursor-pointer truncate" onclick="toggleGroupCollapse('${item.id}')">
+                            <span class="font-mono text-[9px]">${symbol}</span>
+                            <span class="tracking-wide uppercase text-[10px] truncate">${item.label}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 font-normal text-xs shrink-0">
+                            <button onclick="assignActiveGroup('${item.id}')" class="text-emerald-500 hover:underline text-[10px]">Add</button>
+                            <span class="text-slate-300 dark:text-slate-700">|</span>
+                            <button onclick="removeItem(${index})" class="text-slate-400 hover:text-red-500 text-[10px]">Del</button>
+                        </div>
+                    `;
+                }
+                namesContainer.appendChild(div);
+            });
+
+            wrapper.addEventListener('scroll', () => {
+                document.getElementById('signal-list-scroll').scrollTop = wrapper.scrollTop;
+            });
+
+            setupCanvasInteractions();
+            draw();
+        }
+
+        window.removeItem = function(activeIndex) {
+            const activeItems = getFlatRenderList();
+            const targetItem = activeItems[activeIndex];
+            const realIdx = visibleSignals.indexOf(targetItem);
+            
+            if (realIdx !== -1) {
+                if(visibleSignals[realIdx].type === 'group') {
+                    const gid = visibleSignals[realIdx].id;
+                    visibleSignals.forEach(item => { if(item.parentGroupId === gid) item.parentGroupId = null; });
+                }
+                visibleSignals.splice(realIdx, 1);
+                initRenderer();
+            }
+        };
+
+        window.toggleGroupCollapse = function(groupId) {
+            const group = visibleSignals.find(i => i.type === 'group' && i.id === groupId);
+            if (group) {
+                group.collapsed = !group.collapsed;
+                initRenderer();
+            }
+        };
+
+        window.assignActiveGroup = function(groupId) {
+            const group = visibleSignals.find(i => i.type === 'group' && i.id === groupId);
+            const targetSigName = prompt(`Enter system signal name to attach inside Folder Group "${group.label}":`);
+            if(!targetSigName) return;
+
+            const sig = parsedData.signals.find(s => s.name.toLowerCase().endsWith(targetSigName.toLowerCase()));
+            if (sig) {
+                visibleSignals = visibleSignals.filter(item => !(item.type === 'signal' && item.signal === sig));
+                
+                const groupIndex = visibleSignals.indexOf(group);
+                visibleSignals.splice(groupIndex + 1, 0, { type: 'signal', signal: sig, parentGroupId: groupId });
+                initRenderer();
+            } else {
+                alert(`Signal "${targetSigName}" was not found inside trace definitions list.`);
+            }
+        };
+
+        window.showAddSignalMenu = function(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('add-signal-menu');
+            menu.innerHTML = '';
+            
+            let dBtn = document.createElement('button');
+            dBtn.className = 'block w-full text-left px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-bold text-indigo-500 border-b border-slate-100 dark:border-slate-800';
+            dBtn.innerText = '+ Add Section Divider';
+            dBtn.onclick = () => {
+                let lbl = prompt("Enter Section Divider text label name:");
+                if(lbl) { visibleSignals.push({ type: 'divider', id: 'div_' + Date.now(), label: lbl }); initRenderer(); }
+            };
+            menu.appendChild(dBtn);
+
+            let gBtn = document.createElement('button');
+            gBtn.className = 'block w-full text-left px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-bold text-indigo-500 border-b border-slate-100 dark:border-slate-800';
+            gBtn.innerText = '+ Create Folder Group';
+            gBtn.onclick = () => {
+                let lbl = prompt("Enter Folder Group name:");
+                if(lbl) { visibleSignals.push({ type: 'group', id: 'grp_' + Date.now(), label: lbl, collapsed: false }); initRenderer(); }
+            };
+            menu.appendChild(gBtn);
+
+            parsedData.signals.forEach(sig => {
+                const isMapped = visibleSignals.some(item => item.type === 'signal' && item.signal === sig);
+                if (!isMapped) {
+                    const btn = document.createElement('button');
+                    btn.className = 'block w-full text-left px-4 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-200 truncate font-mono';
+                    btn.innerText = `sig: ${sig.name.split('.').pop()}`;
+                    btn.onclick = () => {
+                        visibleSignals.push({ type: 'signal', signal: sig, parentGroupId: null });
+                        initRenderer();
+                    };
+                    menu.appendChild(btn);
+                }
+            });
+
+            menu.classList.remove('hidden');
+        };
+
+        window.hideAddSignalMenu = function() {
+            const menu = document.getElementById('add-signal-menu');
+            if (menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
+        };
+
+        window.changeGlobalRadix = function(newRadix) {
+            globalRadix = newRadix;
+            updateSidebarValues();
+            draw();
+        }
+
+        function formatDisplayValue(val, size) {
+            if (val.toLowerCase().includes('x')) return 'X';
+            if (val.toLowerCase().includes('z')) return 'Z';
+            if (size === 1) return val;
+            
+            if (/^[01]+$/.test(val)) {
+                let paddedVal = val.padStart(size, '0');
+
+                if (globalRadix === 'hex') {
+                    let hexChars = Math.ceil(size / 4);
+                    return 'h' + parseInt(paddedVal, 2).toString(16).toUpperCase().padStart(hexChars, '0');
+                }
+                if (globalRadix === 'udec') return parseInt(paddedVal, 2).toString(10);
+                if (globalRadix === 'sdec') {
+                    let num = parseInt(paddedVal, 2);
+                    if (paddedVal[0] === '1') num = num - Math.pow(2, size);
+                    return num.toString(10);
+                }
+                if (globalRadix === 'bin') return 'b' + paddedVal;
+                if (globalRadix === 'oct') {
+                    let octChars = Math.ceil(size / 3);
+                    return 'o' + parseInt(paddedVal, 2).toString(8).padStart(octChars, '0');
+                }
+            }
+            return val;
+        }
+
+        function getValueClass(val, size) {
+            if (val.toLowerCase().includes('x')) return 'val-x';
+            if (val.toLowerCase().includes('z')) return 'val-z';
+            if (size > 1) return 'val-bus';
+            if (val === '1') return 'val-1';
+            return 'val-0';
+        }
+
+        function getValueAtTime(sig, time) {
+            if (!sig.transitions || sig.transitions.length === 0) return 'x';
+            let currentVal = sig.transitions[0].val;
+            for (let i = 0; i < sig.transitions.length; i++) {
+                if (sig.transitions[i].time > time) break;
+                currentVal = sig.transitions[i].val;
+            }
+            return currentVal;
+        }
+
+        // --- 4.5 SIDEBAR RESIZER ---
+        function setupSidebarResizer() {
+            const resizer = document.getElementById('sidebar-resizer');
+            const sidebar = document.getElementById('signal-list');
+            
+            if (!resizer) return; // guard if already setup
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                let newWidth = e.clientX;
+                if (newWidth < 150) newWidth = 150;
+                if (newWidth > 600) newWidth = 600;
+                sidebar.style.width = newWidth + 'px';
+                draw();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('active');
+                    document.body.style.cursor = '';
+                    draw();
+                }
+            });
+        }
+
+        // --- 5. CANVAS INTERACTIVITY ---
+        function setupCanvasInteractions() {
+            wrapper.onmousedown = (e) => {
+                if (e.button === 1 || e.shiftKey) {
+                    isPanning = true;
+                    startX = e.pageX - wrapper.offsetLeft;
+                    scrollLeft = wrapper.scrollLeft;
+                    wrapper.style.cursor = 'grabbing';
+                    e.preventDefault();
+                }
+            };
+            
+            wrapper.onmouseup = () => { isPanning = false; wrapper.style.cursor = 'crosshair'; };
+            wrapper.onmouseleave = () => { isPanning = false; wrapper.style.cursor = 'crosshair'; };
+
+            wrapper.onmousemove = (e) => {
+                if (isPanning) {
+                    e.preventDefault();
+                    const x = e.pageX - wrapper.offsetLeft;
+                    wrapper.scrollLeft = scrollLeft - (x - startX);
+                    return;
+                }
+
+                const rect = waveCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left - paddingX;
+                let rawTime = x / scale;
+                hoverTime = Math.max(0, Math.min(Math.round(rawTime), parsedData.maxTime));
+                
+                document.getElementById('cursor-time-display').innerText = getDeltaTimeText(hoverTime);
+                updateSidebarValues();
+                drawCursor();
+            };
+
+            wrapper.onclick = (e) => {
+                if (e.shiftKey) return; 
+                anchorTime = hoverTime;
+                drawCursor();
+            };
+
+            wrapper.oncontextmenu = (e) => {
+                e.preventDefault();
+                anchorTime = null;
+                drawCursor();
+            };
+        }
+
+        function updateSidebarValues() {
+            const activeItems = getFlatRenderList();
+            activeItems.forEach((item, index) => {
+                if (item.type !== 'signal') return;
+                const val = getValueAtTime(item.signal, hoverTime);
+                const badge = document.getElementById(`val-badge-${index}`);
+                if (badge) {
+                    badge.innerText = formatDisplayValue(val, item.signal.size);
+                    badge.className = `sig-val ${getValueClass(val, item.signal.size)} pointer-events-none`;
+                }
+            });
+        }
+
+        // --- 6. CANVAS CORE RENDER ENGINE ---
+        function zoom(factor) {
+            scale *= factor;
+            if (scale < 0.000001) scale = 0.000001; 
+            if (scale > 500) scale = 500;
+            draw();
+        }
+
+        function fitToScreen() {
+            const containerWidth = wrapper.clientWidth;
+            if (containerWidth > 0) {
+                scale = (containerWidth - 50 - paddingX) / Math.max(1, parsedData.maxTime);
+                if (scale > 50) scale = 50;
+            }
+            draw();
+        }
+        
+        function getDynamicTickInterval(currentScale) {
+            const targetTimePerTick = 100 / currentScale;
+            if (targetTimePerTick <= 1) return 1;
+            const mag = Math.pow(10, Math.floor(Math.log10(targetTimePerTick)));
+            const normalized = targetTimePerTick / mag;
+            
+            if (normalized < 1.5) return mag;
+            if (normalized < 3.5) return 2 * mag;
+            if (normalized < 7.5) return 5 * mag;
+            return 10 * mag;
+        }
+
+        function draw() {
+            const activeItems = getFlatRenderList();
+            const width = Math.max(wrapper.clientWidth, paddingX + parsedData.maxTime * scale + 50);
+            const height = activeItems.length * rowHeight;
+
+            waveCanvas.width = width; waveCanvas.height = height;
+            cursorCanvas.width = width; cursorCanvas.height = height;
+            timeCanvas.width = width;
+
+            document.getElementById('wave-container').style.width = width + 'px';
+            document.getElementById('wave-container').style.height = height + 'px';
+
+            drawTimeline(width);
+            drawWaveforms(width, height);
+            drawCursor();
+        }
+
+        function drawTimeline(width) {
+            const theme = getColors();
+            timeCtx.clearRect(0, 0, width, 32);
+            timeCtx.fillStyle = theme.timelineBg;
+            timeCtx.fillRect(0, 0, width, 32);
+            
+            timeCtx.fillStyle = theme.timelineText;
+            timeCtx.font = '10px "Fira Code", monospace';
+            timeCtx.textAlign = 'center';
+            timeCtx.textBaseline = 'top';
+
+            let tickInterval = getDynamicTickInterval(scale);
+
+            for (let t = 0; t <= parsedData.maxTime; t += tickInterval) {
+                const x = paddingX + t * scale;
+                timeCtx.beginPath();
+                timeCtx.moveTo(x, 22); timeCtx.lineTo(x, 32);
+                timeCtx.strokeStyle = theme.timelineTick; timeCtx.stroke();
+                timeCtx.fillText(t.toString(), x, 6);
+            }
+        }
+
+        function drawCursor() {
+            const theme = getColors();
+            const width = cursorCanvas.width;
+            const height = cursorCanvas.height;
+            cursorCtx.clearRect(0, 0, width, height);
+
+            if (hoverTime !== null && hoverTime >= 0 && hoverTime <= parsedData.maxTime) {
+                const hX = paddingX + hoverTime * scale;
+                cursorCtx.beginPath();
+                cursorCtx.moveTo(hX, 0); cursorCtx.lineTo(hX, height);
+                cursorCtx.strokeStyle = theme.cursorLine;
+                cursorCtx.lineWidth = 1; cursorCtx.setLineDash([4, 4]);
+                cursorCtx.stroke(); cursorCtx.setLineDash([]);
+            }
+
+            if (anchorTime !== null) {
+                const aX = paddingX + anchorTime * scale;
+                
+                cursorCtx.beginPath();
+                cursorCtx.moveTo(aX, 0); cursorCtx.lineTo(aX, height);
+                cursorCtx.strokeStyle = theme.anchor;
+                cursorCtx.lineWidth = 1.5;
+                cursorCtx.stroke();
+
+                if (hoverTime !== anchorTime && hoverTime !== null) {
+                    const hX = paddingX + hoverTime * scale;
+                    const deltaTicks = Math.abs(hoverTime - anchorTime);
+                    const midX = Math.min(aX, hX) + Math.abs(aX - hX) / 2;
+
+                    cursorCtx.beginPath();
+                    cursorCtx.moveTo(aX, 15); cursorCtx.lineTo(hX, 15);
+                    cursorCtx.strokeStyle = theme.deltaLine;
+                    cursorCtx.lineWidth = 2;
+                    cursorCtx.stroke();
+
+                    const dtStr = getDeltaTimeText(deltaTicks);
+                    const freqStr = getFrequencyString(deltaTicks);
+                    const text = `Δt: ${dtStr} ${freqStr ? ' | ' + freqStr : ''}`;
+                    
+                    cursorCtx.font = 'bold 10px "Fira Code"';
+                    const textWidth = cursorCtx.measureText(text).width;
+                    
+                    cursorCtx.fillStyle = theme.deltaBg;
+                    cursorCtx.fillRect(midX - (textWidth/2) - 6, 6, textWidth + 12, 18);
+                    cursorCtx.fillStyle = theme.deltaText;
+                    cursorCtx.textAlign = 'center';
+                    cursorCtx.textBaseline = 'middle';
+                    cursorCtx.fillText(text, midX, 15);
+                }
+            }
+        }
+
+        function drawWaveforms(width, height) {
+            const theme = getColors();
+            const activeItems = getFlatRenderList();
+            waveCtx.clearRect(0, 0, width, height);
+            
+            activeItems.forEach((item, i) => {
+                if (item.type === 'divider') {
+                    waveCtx.fillStyle = theme.dividerBg;
+                    waveCtx.fillRect(0, i * rowHeight, width, rowHeight);
+                    return;
+                }
+                if (item.type === 'group') {
+                    waveCtx.fillStyle = theme.groupBg;
+                    waveCtx.fillRect(0, i * rowHeight, width, rowHeight);
+                    return;
+                }
+
+                if (i % 2 === 1) {
+                    waveCtx.fillStyle = theme.rowAltBg;
+                    waveCtx.fillRect(0, i * rowHeight, width, rowHeight);
+                }
+                
+                waveCtx.strokeStyle = theme.gridLines;
+                waveCtx.lineWidth = 1;
+                waveCtx.beginPath();
+                waveCtx.moveTo(0, i * rowHeight); waveCtx.lineTo(width, i * rowHeight);
+                waveCtx.stroke();
+            });
+
+            let tickInterval = getDynamicTickInterval(scale);
+            waveCtx.strokeStyle = theme.gridLines;
+            for (let t = 0; t <= parsedData.maxTime; t += tickInterval) {
+                const x = paddingX + t * scale;
+                waveCtx.beginPath();
+                waveCtx.moveTo(x, 0); waveCtx.lineTo(x, height);
+                waveCtx.stroke();
+            }
+
+            activeItems.forEach((item, index) => {
+                if (item.type !== 'signal') return;
+                const sig = item.signal;
+                
+                const yTop = index * rowHeight + paddingY;
+                const yBottom = yTop + waveHeight;
+                const yMid = yTop + waveHeight / 2;
+
+                waveCtx.lineWidth = 2.0; 
+                waveCtx.font = '11px "Fira Code", monospace';
+                waveCtx.textAlign = 'center';
+                waveCtx.textBaseline = 'middle';
+
+                for (let i = 0; i < sig.transitions.length; i++) {
+                    const trans = sig.transitions[i];
+                    const nextTrans = sig.transitions[i+1];
+                    const xStart = paddingX + trans.time * scale;
+                    const xEnd = paddingX + (nextTrans ? nextTrans.time * scale : parsedData.maxTime * scale);
+                    
+                    if (xStart >= xEnd) continue;
+
+                    const val = trans.val;
+                    const isUnknown = val.toLowerCase().includes('x');
+                    const isHighZ = val.toLowerCase().includes('z');
+
+                    if (sig.size === 1) {
+                        let yLine;
+                        if (val === '1') { 
+                            yLine = yTop; 
+                            waveCtx.strokeStyle = theme.val1; 
+                            waveCtx.fillStyle = theme.val1Fill;
+                            waveCtx.fillRect(xStart, yTop, xEnd - xStart, waveHeight);
+                        } 
+                        else if (val === '0') { yLine = yBottom; waveCtx.strokeStyle = theme.val0; } 
+                        else if (isUnknown) { 
+                            yLine = yMid; waveCtx.strokeStyle = theme.valX;
+                            waveCtx.fillStyle = theme.valXFill;
+                            waveCtx.fillRect(xStart, yTop, xEnd - xStart, waveHeight);
+                        } 
+                        else { yLine = yMid; waveCtx.strokeStyle = theme.valZ; } 
+
+                        waveCtx.beginPath();
+                        waveCtx.moveTo(xStart, yLine); waveCtx.lineTo(xEnd, yLine);
+                        waveCtx.stroke();
+
+                        if (i > 0) {
+                            const prevVal = sig.transitions[i-1].val;
+                            if (prevVal !== val && trans.time > 0) {
+                                let prevYLine = prevVal === '1' ? yTop : (prevVal === '0' ? yBottom : yMid);
+                                waveCtx.beginPath();
+                                waveCtx.moveTo(xStart, prevYLine); waveCtx.lineTo(xStart, yLine);
+                                waveCtx.stroke();
+                            }
+                        }
+                    } else {
+                        if (isUnknown) { waveCtx.strokeStyle = theme.valX; waveCtx.fillStyle = theme.valXFill; } 
+                        else if (isHighZ) { waveCtx.strokeStyle = theme.valZ; waveCtx.fillStyle = 'transparent'; } 
+                        else { waveCtx.strokeStyle = theme.valBus; waveCtx.fillStyle = 'transparent'; }
+
+                        if (xEnd - xStart > 4) {
+                            waveCtx.beginPath();
+                            waveCtx.moveTo(xStart, yMid);
+                            waveCtx.lineTo(xStart + 3, yTop); waveCtx.lineTo(xEnd - 3, yTop);
+                            waveCtx.lineTo(xEnd, yMid);
+                            waveCtx.lineTo(xEnd - 3, yBottom); waveCtx.lineTo(xStart + 3, yBottom);
+                            waveCtx.closePath();
+                            
+                            if (isUnknown) waveCtx.fill();
+                            waveCtx.stroke();
+
+                            if (xEnd - xStart > 25) {
+                                waveCtx.fillStyle = isUnknown ? theme.busTextX : theme.busTextVal;
+                                let displayVal = formatDisplayValue(val, sig.size);
+                                
+                                waveCtx.save();
+                                waveCtx.beginPath();
+                                waveCtx.rect(xStart + 4, yTop, xEnd - xStart - 8, waveHeight);
+                                waveCtx.clip();
+                                waveCtx.fillText(displayVal, xStart + (xEnd - xStart)/2, yMid);
+                                waveCtx.restore();
+                            }
+                        } else {
+                            waveCtx.beginPath();
+                            waveCtx.moveTo(xStart, yTop); waveCtx.lineTo(xEnd, yTop);
+                            waveCtx.moveTo(xStart, yBottom); waveCtx.lineTo(xEnd, yBottom);
+                            waveCtx.stroke();
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 7. HIGH-DEFINITION PNG EXPORT CANVAS ENGINE ---
+        window.exportWaveformPNG = function() {
+            const activeItems = getFlatRenderList();
+            const sidebarWidth = parseInt(document.getElementById('signal-list').style.width) || 240;
+            const canvasW = waveCanvas.width;
+            const totalW = sidebarWidth + canvasW;
+            const totalH = Math.max(timeCanvas.height + waveCanvas.height, 120);
+
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = totalW;
+            exportCanvas.height = totalH;
+            const exCtx = exportCanvas.getContext('2d');
+            const theme = getColors();
+
+            exCtx.fillStyle = isDarkMode ? '#020617' : '#ffffff';
+            exCtx.fillRect(0, 0, totalW, totalH);
+
+            exCtx.drawImage(timeCanvas, sidebarWidth, 0);
+            exCtx.drawImage(waveCanvas, sidebarWidth, 32);
+            exCtx.drawImage(cursorCanvas, sidebarWidth, 32);
+
+            exCtx.fillStyle = isDarkMode ? '#0f172a' : '#f8fafc';
+            exCtx.fillRect(0, 0, sidebarWidth, totalH);
+            exCtx.strokeStyle = isDarkMode ? '#1e293b' : '#e2e8f0';
+            exCtx.lineWidth = 1;
+            exCtx.beginPath();
+            exCtx.moveTo(sidebarWidth, 0); exCtx.lineTo(sidebarWidth, totalH);
+            exCtx.stroke();
+
+            exCtx.fillStyle = isDarkMode ? '#1e293b' : '#f1f5f9';
+            exCtx.fillRect(0, 0, sidebarWidth, 32);
+            exCtx.fillStyle = isDarkMode ? '#94a3b8' : '#64748b';
+            exCtx.font = 'bold 10px "Inter", sans-serif';
+            exCtx.textBaseline = 'middle';
+            exCtx.fillText("SIGNAL CONFIGURATION MATRIX", 16, 16);
+
+            activeItems.forEach((item, idx) => {
+                const rowY = 32 + idx * rowHeight;
+                
+                if (item.type === 'divider') {
+                    exCtx.fillStyle = theme.dividerBg;
+                    exCtx.fillRect(0, rowY, sidebarWidth, rowHeight);
+                    exCtx.fillStyle = theme.dividerText;
+                    exCtx.font = 'bold 10px "Inter", sans-serif';
+                    exCtx.fillText(item.label.toUpperCase(), 16, rowY + rowHeight/2);
+                    return;
+                }
+                if (item.type === 'group') {
+                    exCtx.fillStyle = theme.groupBg;
+                    exCtx.fillRect(0, rowY, sidebarWidth, rowHeight);
+                    exCtx.fillStyle = theme.groupText;
+                    exCtx.font = 'bold 11px "Inter", sans-serif';
+                    const sym = item.collapsed ? '► ' : '▼ ';
+                    exCtx.fillText(sym + item.label.toUpperCase(), 16, rowY + rowHeight/2);
+                    return;
+                }
+
+                if (idx % 2 === 1) {
+                    exCtx.fillStyle = isDarkMode ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.02)';
+                    exCtx.fillRect(0, rowY, sidebarWidth, rowHeight);
+                }
+
+                exCtx.strokeStyle = isDarkMode ? '#1e293b' : '#e2e8f0';
+                exCtx.beginPath();
+                exCtx.moveTo(0, rowY + rowHeight); exCtx.lineTo(sidebarWidth, rowY + rowHeight);
+                exCtx.stroke();
+
+                const indent = item.parentGroupId ? 16 : 0;
+                const shortName = item.signal.name.split('.').pop();
+                const displayName = showFullPath ? item.signal.name : shortName;
+
+                exCtx.fillStyle = isDarkMode ? '#64748b' : '#94a3b8';
+                exCtx.font = '9px "Fira Code"';
+                exCtx.fillText(`[${item.signal.size}]`, 12 + indent, rowY + rowHeight/2);
+
+                exCtx.fillStyle = isDarkMode ? '#e2e8f0' : '#0f172a';
+                exCtx.font = 'bold 12px "Inter", sans-serif';
+                exCtx.fillText(displayName, 38 + indent, rowY + rowHeight/2);
+
+                const val = getValueAtTime(item.signal, hoverTime);
+                const displayVal = formatDisplayValue(val, item.signal.size);
+                exCtx.fillStyle = isDarkMode ? '#3b82f6' : '#2563eb';
+                exCtx.font = 'bold 11px "Fira Code"';
+                exCtx.textAlign = 'right';
+                exCtx.fillText(displayVal, sidebarWidth - 12, rowY + rowHeight/2);
+                exCtx.textAlign = 'left';
+            });
+
+            const dLink = document.createElement('a');
+            dLink.download = `logicsilicon_wave_report_${Date.now()}.png`;
+            dLink.href = exportCanvas.toDataURL('image/png');
+            dLink.click();
+        };
+    </script>
+</body>
+</html>
