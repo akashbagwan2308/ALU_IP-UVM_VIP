@@ -56,6 +56,26 @@ module tb_top;
     );
 
     // --------------------------------------------------------
+    // SVA Binding
+    // --------------------------------------------------------
+    // This injects the alu_sva module directly into the DUT hierarchy
+    bind alu_top alu_sva #(.WIDTH(WIDTH)) sva_inst (
+        .clk    (CLK),
+        .rst_n  (RST_N),
+        .sel    (SEL),
+        .enable (ENABlE),
+        .write  (WRTIE),
+        .addr   (ADDR),
+        .wdata  (WDATA),
+        .ready  (READY),
+        
+        // Tapping into internal signals using hierarchical paths
+        .ctrl   (ALU_CTRL),
+        .busy   (BUSY_REG),
+        .done   (DONE_REG)
+    );
+
+    // --------------------------------------------------------
     // UVM Setup and Execution
     // -------------------------------------------------------- 
 
@@ -66,12 +86,15 @@ module tb_top;
 
         // 2. Pass the virtual interface into the UVM Configuration Database
         // This allows your base_test (and ultimately your agent/driver) to grab it.
-        uvm_config_db#(virtual apb_inft #(.WIDTH(WIDTH)))::set(null, "uvm_test_top", "vif", apb_if);
+        uvm_config_db#(virtual apb_inft #(.WIDTH(WIDTH)))::set(null, "*", "vif", apb_if);
 
         // 3. Start the UVM Test
         // UVM will look at the +UVM_TESTNAME command line argument to decide which test to run.
-        run_test("alu_reg_test");
+        // run_test("alu_reg_test");
         // run_test("alu_reset_test");
+        // run_test("alu_stress_test");
+        // run_test("alu_smoke_test");
+        run_test("alu_random_test");
     end
     initial begin
     #1;  // Small delay to ensure proper execution

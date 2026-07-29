@@ -1,8 +1,8 @@
 //
 
-class alu_random_test extends base_test ;
+class alu_random_test extends base_test;
     
-    `uvm_component_param_utils(alu_random_test)
+    `uvm_component_utils(alu_random_test)
     
     function new(string name = "alu_random_test", uvm_component parent = null);
         super.new(name, parent);

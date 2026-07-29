@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UVM to DUT Architecture Block Diagram</title>
+    <!-- Load Mermaid.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2f; 
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 {
+            margin-bottom: 10px;
+            text-align: center;
+            color: #00d2d3;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        .download-btn {
+            background-color: #00d2d3;
+            color: #1e1e2f;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .download-btn:hover {
+            background-color: #00e5e5;
+        }
+        .mermaid-container {
+            width: 95vw;
+            overflow-x: auto; 
+            background-color: #ffffff; 
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            padding: 30px;
+        }
+        .mermaid-container::-webkit-scrollbar { height: 10px; }
+        .mermaid-container::-webkit-scrollbar-thumb { background: #888; border-radius: 5px; }
+        .mermaid-container::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body>
+
+    <h2>UVM Testbench ➔ Interface ➔ ALU DUT Architecture</h2>
+    
+    <div class="controls">
+        <button class="download-btn" onclick="downloadDiagram()">Download Diagram (4K High-Res PNG)</button>
+    </div>
+    
+    <div class="mermaid-container">
+        <div class="mermaid">
+            flowchart LR
+                %% ========================================================
+                %% 1. UVM TESTBENCH TOP (LEFT)
+                %% ========================================================
+                subgraph TB_TOP ["tb_top (Verification Environment)"]
+                    direction LR
+                    
+                    subgraph UVM ["UVM Test Hierarchy"]
+                        direction TB
+                        CLK_GEN(["Clock & Reset Generator<br>(100MHz PCLK, PRESET_n)"])
+                        
+                        CDB[("uvm_config_db<br>(Stores 'vif')")]
+                        
+                        subgraph TEST_LIB ["Test Library"]
+                            direction TB
+                            T0("base test") & T1("smoke") & T2("add/sub") & T3("reg (Stuck-at)") & T4("reset (On-the-fly)") & T5("stress")
+                        end
+                        T0 --> T1
+                        T0 --> T2
+                        T0 --> T3
+                        T0 --> T4
+                        T0 --> T5
+                        subgraph TEST ["base_test (Active)"]
+                            direction TB
+                            
+                            subgraph SEQ_LIB ["Sequence Library"]
+                                direction LR
+                                S_OP("Operational Seqs<br>(add, sub, rand)") -.->|"Composed of"| S_TX("Transactional Seqs<br>(read, write)")
+                            end
+
+                            subgraph ENV ["alu_env"]
+                                direction TB
+                                
+                                subgraph RAL ["Register Abstraction Layer"]
+                                    direction LR
+                                    REG_MODEL[("Reg Model")] -.->|"reg2bus"| ADAPTER["alu_reg_adapter"]
+                                    PREDICTOR["alu_predictor"] -.->|"bus2reg"| REG_MODEL
+                                end
+                                
+                                VSQR["virtual_sequencer"]
+                                
+                                subgraph SCBD_GRP ["Scoreboard"]
+                                    direction LR
+                                    SCBD["Scoreboard Control"] -->|"Queries expected"| REF["alu_reference_model"]
+                                end
+                                
+                                subgraph COV_GRP ["Coverage"]
+                                    direction LR
+                                    COV["Subscriber Logic"] -->|"Samples on START"| CG["covergroup alu_cg"]
+                                end
+                                
+                                subgraph AGENT ["apb_agent (Active)"]
+                                    direction LR
+                                    SEQR["apb_sequencer"] -->|"req (seq_item_port)"| DRV["apb_driver"]
+                                    MON["apb_monitor"]
+                                end
+                                
+                                %% Env Internal TLM Connections
+                                MON -.->|"item_collected_port"| PREDICTOR & SCBD & COV
+                                VSQR -.->|"Routes to"| SEQR
+                                ADAPTER -.->|"Mapped items"| SEQR
+                            end
+                            
+                            %% Sequence Injection
+                            S_TX -.->|"Executes on"| VSQR
+                        end
+                        
+                        TEST_LIB -.->|"+UVM_TESTNAME"| TEST
+                        CDB -.->|"Passes vif"| MON & DRV
+                    end
+
+                    %% ========================================================
+                    %% 2. SYSTEMVERILOG INTERFACE (MIDDLE)
+                    %% ========================================================
+                    subgraph IF_WRAPPER ["SystemVerilog Interface"]
+                        direction TB
+                                              
+                        subgraph IF ["apb_inft"]
+                            direction TB
+                            CB["Clocking Blocks<br>(drv_cb, mon_cb)"]
+                            MODS["Modports<br>(DRIVER, MONITOR, DUT)"]
+                            subgraph SIGS["APB Bus Signals"]
+                                direction TB
+                                vif_sigs["<br>PSEL<br>PENABLE<br>PWRITE<br>PADDR<br>PWDATA<br>PRDATA<br>PREADY"]
+                            end
+                            
+                            CB --- MODS --- SIGS
+                        end
+                        %% FIX: Split chained edges
+                        CLK_GEN -->|"Drives"| CDB  
+                        CDB -->|"CLK, RESET_n"| CB
+                    end
+
+                    %% ========================================================
+                    %% 3. DUT: ALU TOP (RIGHT)
+                    %% ========================================================
+                    subgraph DUT ["DUT: alu_top"]
+                        direction TB
+                        
+                        subgraph SLAVE["APB Slave Module"]
+                            direction TB
+                            IN_OUT["PCKL<br>PRESET_n<br>PSEL<br>PENABLE<br>PWRITE<br>PADDR<br>PWDATA<br>PRDATA<br>PREADY"]
+                            subgraph SLAVE_FSM["FSM"]
+                            direction TB
+                                    S_STATE1["IDLE"]
+                                    S_STATE2["SETUP"]
+                                    S_STATE3["ACCESS"]
+                            end
+                            S_STATE1 --> S_STATE2 --> S_STATE3
+                        end
+                        
+                        subgraph REGS["Register File"]
+                            direction TB
+                            REG_ADDR["0x00: CTRL<br>0x04: OPERA<br>0x08: OPERB<br>0x0C: OPCODE<br>0x10: STATUS<br>0x14: RESULT"]
+                            STATUS_REG["STATUS REGISTER<br>bit 0 : VALID<br>bit 1 : DONE<br>bit 2 : BUSY<br>bit 3 : CARRY<br>bit 4 : NEGATIVE<br>bit 5 : OVERFLOW<br>bit 6 : ZERO_DIV<br>bit 7 : GT<br>bit 8 : EQ"]
+                        end
+                        
+                        subgraph ALU ["ALU Core Module"]
+                            direction LR
+                            DEC["OPCODE DECODER<br>(ADD_EN,<br>SUB_EN,<br>MUL_EN,<br>DIV_EN,<br>SHL_EN,<br>SHR_EN,<br>ROL_EN,<br>ROR_EN,<br>AND_EN,<br>OR_EN,<br>XOR_EN,<br>XNOR_EN,<br>NAND_EN,<br>NOR_EN,<br>GT_EN,<br>EQ_EN)"]
+                            
+                            subgraph DP ["Detailed Datapath"]
+                                direction TB
+                                OP_A["Operand A"]
+                                OP_B["Operand B"]
+                                subgraph AU ["Arithmetic"]
+                                    direction TB
+                                    ARITH_ADD["ADD"]
+                                    ARITH_SUB["SUB"]
+                                    ARITH_MUL["MUL"]
+                                    ARITH_DIV["DIV"]
+                                end
+                                subgraph SU ["Shift/Rotate"]
+                                    direction TB
+                                    SHIFT_SHL["SHL"]
+                                    SHIFT_SHR["SHR"]
+                                    SHIFT_ROL["ROL"]
+                                    SHIFT_ROR["ROR"]
+                                end
+                                subgraph LU ["Logic"]
+                                    direction TB
+                                    LOGIC_AND["AND"]
+                                    LOGIC_OR["OR"]
+                                    LOGIC_XOR["XOR"]
+                                    LOGIC_XNOR["XNOR"]
+                                    LOGIC_NAND["NAND"]
+                                    LOGIC_NOR["NOR"]
+                                end
+                                subgraph CU ["Compare"]
+                                    direction TB
+                                    COMP_GT["GT"]
+                                    COMP_EQ["EQ"]
+                                end
+                            end
+                            
+                            MUX["OUTPUT MUX<br>(RESULT,<br>VALID,<br>CARRY,<br>NEGATIVE,<br>OVERFLOW,<br>ZERO,<br>GT,<br>EQ,<br>done,<br>busy)"]
+                            subgraph FSM["ALU FSM (2-Cycle)"]
+                                direction TB
+                                    STATE1["IDLE"]
+                                    STATE2["EXECUTE"]
+                                    STATE3["COMPLETE"]
+                            end
+                            
+                            %% Decoder to Datapath Connections
+                            DEC -->|"[0] Enables"| ARITH_ADD
+                            DEC -->|"[1] Enables"| ARITH_SUB
+                            DEC -->|"[2] Enables"| ARITH_MUL
+                            DEC -->|"[3] Enables"| ARITH_DIV
+                            
+                            DEC -->|"[4] Enables"| SHIFT_SHL
+                            DEC -->|"[5] Enables"| SHIFT_SHR
+                            DEC -->|"[6] Enables"| SHIFT_ROL
+                            DEC -->|"[7] Enables"| SHIFT_ROR
+                            
+                            DEC -->|"[8] Enables"| LOGIC_AND
+                            DEC -->|"[9] Enables"| LOGIC_OR
+                            DEC -->|"[10] Enables"| LOGIC_XOR
+                            DEC -->|"[11] Enables"| LOGIC_XNOR
+                            DEC -->|"[12] Enables"| LOGIC_NAND
+                            DEC -->|"[13] Enables"| LOGIC_NOR
+                            
+                            DEC -->|"[14] Enables"| COMP_GT
+                            DEC -->|"[15] Enables"| COMP_EQ
+                            
+                            %% Datapath to MUX Connections
+                            ARITH_ADD -->|"ADD Result, CARRY"| MUX
+                            ARITH_SUB -->|"SUB Result, NEGATIVE"| MUX
+                            ARITH_MUL -->|"MUL Result, OVERFLOW"| MUX
+                            ARITH_DIV -->|"DIV Result, ZERO"| MUX
+                            
+                            SHIFT_SHL -->|"SHL Result"| MUX
+                            SHIFT_SHR -->|"SHR Result"| MUX
+                            SHIFT_ROL -->|"ROL Result"| MUX
+                            SHIFT_ROR -->|"ROR Result"| MUX
+                            
+                            LOGIC_AND -->|"AND Result"| MUX
+                            LOGIC_OR -->|"OR Result"| MUX
+                            LOGIC_XOR -->|"XOR Result"| MUX
+                            LOGIC_XNOR -->|"XNOR Result"| MUX
+                            LOGIC_NAND -->|"NAND Result"| MUX
+                            LOGIC_NOR -->|"NOR Result"| MUX
+                            
+                            COMP_GT -->|"GT Flag"| MUX
+                            COMP_EQ -->|"EQ Flag"| MUX
+                            
+                            %% MUX to FSM
+                            MUX -->|"result_w, flags_w"| FSM
+
+                            STATE1 --> STATE2 --> STATE3
+                        end
+                        
+                        %% DUT Internal Routing
+                        IN_OUT -->|"PSEL, PENABLE, PWRITE, PADDR, PWDATA"| SLAVE_FSM 
+                        SLAVE_FSM -->|"addr, wdata,wr_en"| REGS
+                        
+                        REGS -->|"rdata"| IN_OUT
+                        REGS -.->|"busy (APB_STATUS[2]) Stalls Bus"| IN_OUT
+                        
+                        REGS -->|"A (Operand A)"| OP_A
+                        REGS -->|"B (Operand B)"| OP_B
+                        
+                        REGS -->|"opcode, start"| DEC
+                        REGS -->|"opcode, start"| MUX
+                        FSM -->|"RESULT, Flags, done, busy"| REGS
+                        FSM -.->|"alu_done clears start"| REGS
+                    end
+
+                    %% ========================================================
+                    %% CROSS-DOMAIN ROUTING & CONNECTIONS
+                    %% =======================================================
+                    
+                    DRV ===>|"Drives APB @drv_cb"| CB
+                    CB -.->|"Samples APB @mon_cb"| MON
+                    
+                    SIGS ===>|"Connected via DUT Modport"| IN_OUT
+                    SIGS ===>|"PCLK, PRESET_n"| IN_OUT
+                    SIGS ===>|"PCLK, PRESET_n"| FSM
+                end
+
+                %% ========================================================
+                %% VIBRANT MATERIAL DESIGN COLOR PALETTE
+                %% ========================================================
+                classDef default fill:#f8f9fa,stroke:#ced4da,stroke-width:1px,color:#212529,font-family:sans-serif;
+                
+                classDef uvm fill:#f3e5f5,stroke:#9c27b0,stroke-width:3px,color:#4a148c,font-weight:bold;
+                classDef uvm_comp fill:#e1bee7,stroke:#8e24aa,stroke-width:2px,color:#000;
+                classDef uvm_test fill:#ede7f6,stroke:#5e35b1,stroke-width:2px,color:#1a237e;
+                classDef uvm_seq fill:#fce4ec,stroke:#d81b60,stroke-width:2px,color:#880e4f;
+                classDef ral fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100;
+                
+                classDef iface fill:#e0f2f1,stroke:#00897b,stroke-width:3px,color:#004d40,font-weight:bold;
+                classDef iface_inner fill:#b2dfdb,stroke:#00796b,stroke-width:2px,color:#004d40;
+                
+                classDef dut fill:#e3f2fd,stroke:#1e88e5,stroke-width:3px,color:#0d47a1,font-weight:bold;
+                classDef inner fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000;
+                classDef datapath fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#1b5e20;
+                
+                classDef reg fill:#fff8e1,stroke:#fbc02d,stroke-width:3px,color:#000;
+                classDef db fill:#f1f8e9,stroke:#689f38,stroke-width:2px,color:#000;
+                
+                class TB_TOP default;
+                class UVM,TEST,ENV,AGENT,REG_ADDR uvm;
+                class VSQR,SCBD,COV,SEQR,DRV,MON,REF,CG uvm_comp;
+                class T0,T1,T2,T3,T4,T5,TEST_LIB uvm_test;
+                class S1,S2,S3,S4,S5,OP_SEQS,TX_SEQS,SEQ_LIB uvm_seq;
+                class RAL,ADAPTER,PREDICTOR ral;
+                class IF_WRAPPER,IF iface;
+                class CLK_GEN,CB,MODS,SIGS,vif_sigs iface_inner;
+                class DUT,ALU dut;
+                class SLAVE,DEC,MUX,FSM,IN_OUT,SLAVE_FSM,STATE1,STATE2,STATE3,S_STATE1,S_STATE2,S_STATE3,STATUS_REG inner;
+                class DP,ARITH_ADD,ARITH_SUB,ARITH_MUL,ARITH_DIV,SHIFT_SHL,SHIFT_SHR,SHIFT_ROL,SHIFT_ROR,LOGIC_AND,LOGIC_OR,LOGIC_XOR,LOGIC_XNOR,LOGIC_NAND,LOGIC_NOR,COMP_GT,COMP_EQ datapath;
+                class REGS reg;
+                class CDB,REG_MODEL,REG_MAP db;
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'base',
+            themeVariables: {
+                fontFamily: 'Segoe UI, sans-serif'
+            },
+            securityLevel: 'loose', 
+            flowchart: { 
+                useMaxWidth: false, 
+                htmlLabels: false    
+            } 
+        });
+
+        // FIXED: Robust High-Resolution Download Function (Works locally on file:// protocols)
+        function downloadDiagram() {
+            const svgElement = document.querySelector('.mermaid svg');
+            
+            if (!svgElement) {
+                alert("Please wait for the diagram to render completely.");
+                return;
+            }
+
+            // 1. Ensure the SVG has the necessary XML namespace (Required for Canvas drawing)
+            if (!svgElement.getAttribute('xmlns')) {
+                svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            }
+
+            // 2. Extract bounding dimensions
+            let width = svgElement.viewBox.baseVal ? svgElement.viewBox.baseVal.width : 0;
+            let height = svgElement.viewBox.baseVal ? svgElement.viewBox.baseVal.height : 0;
+            
+            if (!width || !height) {
+                const box = svgElement.getBoundingClientRect();
+                width = box.width;
+                height = box.height;
+            }
+
+            // 3. Set up High-Resolution 4K Scaling Factor
+            const target4KWidth = 3840;
+            const scaleFactor = Math.max(4, target4KWidth / width);
+            const canvasWidth = width * scaleFactor;
+            const canvasHeight = height * scaleFactor;
+
+            // 4. Create the high-res canvas
+            const canvas = document.createElement("canvas");
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            const ctx = canvas.getContext("2d");
+
+            // Fill with solid white background to prevent transparency issues
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 5. Temporarily apply scaled dimensions to the SVG itself for clean serialization
+            const origWidth = svgElement.getAttribute('width');
+            const origHeight = svgElement.getAttribute('height');
+            svgElement.setAttribute('width', canvasWidth);
+            svgElement.setAttribute('height', canvasHeight);
+
+            // 6. Serialize SVG to String
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgElement);
+
+            // Restore original dimensions to avoid breaking the live web page
+            if (origWidth) svgElement.setAttribute('width', origWidth);
+            else svgElement.removeAttribute('width');
+            if (origHeight) svgElement.setAttribute('height', origHeight);
+            else svgElement.removeAttribute('height');
+
+            // 7. Create Image via Data URI (Bypasses Blob restrictions on local files)
+            const img = new Image();
+            
+            img.onload = function () {
+                // Draw onto canvas
+                ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+                
+                // Export to PNG
+                const pngData = canvas.toDataURL("image/png", 1.0);
+
+                // Create hidden download link and click it
+                const downloadLink = document.createElement("a");
+                downloadLink.download = "UVM_DUT_Architecture_4K.png";
+                downloadLink.href = pngData;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            };
+
+            img.onerror = function (err) {
+                alert("Failed to render the image. Please make sure you are not blocking scripts.");
+                console.error("Image loading error:", err);
+            };
+            
+            // Encode the SVG string into a data URI
+            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+        }
+    </script>
+</body>
+</html>

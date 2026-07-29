@@ -16,6 +16,7 @@
 `include "agent/apb_agent.sv"
 
 `include "coverage/alu_coverage.sv"
+`include "assertion/assertions.sv"
 
 `include "reference_model/alu_reference_model.sv"
 

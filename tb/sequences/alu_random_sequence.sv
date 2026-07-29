@@ -6,6 +6,8 @@ class alu_random_sequence #(parameter WIDTH = 8) extends base_sequence #(WIDTH);
     rand bit [WIDTH-1:0] operand_a;
     rand bit [WIDTH-1:0] operand_b;
     rand bit [3:0]       opcode; 
+
+    // constraint op {  opcode==6 || opcode==7 ; }
     
     function new(string name = "alu_random_sequence");
         super.new(name);

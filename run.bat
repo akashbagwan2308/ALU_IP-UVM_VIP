@@ -5,7 +5,7 @@ echo Cleaning old simulation files
 echo ==============================
 
 REM Delete logs and temp files
-del /s /q *.log *.jou *.pb *.wdb *.vcd *.str 2>nul
+del /s /q *.log *.jou *.pb *.wdb *.txt *.vcd *.str 2>nul
 del /s /q *.backup.* 2>nul
 del /s /q *.crvsdump *.dbg *.mem *.reloc *.rtti *.svtype *.type *.xdbg 2>nul
 del /s /q *.exe 2>nul
@@ -39,4 +39,10 @@ call xsim simv -runall
 
 echo.
 echo Simulation Completed!
+
+echo ==============================
+echo Running Regression Analysis
+echo ==============================
+call analyze_regression.bat
+
 pause
