@@ -36,9 +36,10 @@ end
 
 // 2. FSM Next-State Logic (Combinational)
 always @(*) begin
+    addr = PADDR; wdata = PWDATA; 
     case(PS)
-        IDLE   : begin if(PSEL & !PENABLE) begin  NS = SETUP ; addr = PADDR; wdata = PWDATA; end else NS = IDLE;    end
-        SETUP  : begin if(PSEL & PENABLE) NS = ACCESS;  else NS = SETUP;   end
+        IDLE   : begin if(PSEL & !PENABLE) begin  NS = SETUP ; /*addr = PADDR; wdata = PWDATA;*/ end else NS = IDLE;    end
+        SETUP  : begin if(PSEL & PENABLE) NS = ACCESS;  else if(PSEL & !PENABLE) NS = SETUP;  else NS = IDLE;  end
         ACCESS : begin
                     if(PREADY) begin
                         if(!PSEL)
@@ -78,23 +79,21 @@ always @(posedge PCLK, negedge PRESET_n)begin
     else begin  
         // Default assignments
         wr_en  <= 1'b0; 
-        // if (PSEL && !PENABLE) begin  //setup
-        // addr  <= PADDR;
-        // wdata <= PWDATA;
-        // end
         // An APB transaction phase occurs precisely when PSEL and PENABLE are HIGH.
         // We only complete the read/write if the slave is NOT busy (!status[2]).
         if (PSEL && PENABLE && !status[2]) begin
             if (PWRITE) begin      // Write Transaction
                 wr_en <= 1'b1;
-                // $display("[%0t] wr_en asserted", $time);
             end 
             else begin             // Read Transaction
-                PRDATA <= rdata;
+                // PRDATA = rdata;
             end
         end
     end
 end
+
+// always @(*) PRDATA = (!PWRITE && PSEL && PENABLE) ? rdata : {WIDTH{1'b0}}; // Read Transaction
+always @(*) if(!PWRITE && PSEL && PENABLE) PRDATA =  rdata; // Read Transaction
 
 // always @(posedge PCLK)
 //     $strobe("[%0t] PS=%0d NS=%0d PSEL=%b PENABLE=%b PWRITE=%b",

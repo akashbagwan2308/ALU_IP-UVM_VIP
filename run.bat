@@ -26,12 +26,13 @@ call xvlog C:\Users\akash\Downloads\alu_uvm_ip_vip\rtl\top\alu_top.v
 
 echo Compiling Testbench...
 @REM call xvlog -sv -f tb\tb.f
+@REM call xvlog -sv -L uvm -i C:\UVM\1.2\src testbench.sv C:\UVM\1.2\src\uvm_pkg.sv
 call xvlog -sv -L uvm -i C:\UVM\1.2\src tb\top\tb_top.sv C:\UVM\1.2\src\uvm_pkg.sv
 
 
 echo Elaborating...
-@REM call xelab work.tb_top -s simv
 call xelab work.tb_top -s simv -timescale 1ns/1ns
+@REM call xelab work.test -s simv -timescale 1ns/1ns
 
 echo Running Simulation...
 call xsim simv -runall

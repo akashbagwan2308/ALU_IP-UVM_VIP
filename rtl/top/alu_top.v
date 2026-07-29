@@ -41,7 +41,7 @@ apb_slave #(.WIDTH(WIDTH))  APB_SLAVE(
     .wdata(APB_WDATA),
     .addr(APB_ADDR),
     .rdata(APB_RDATA),
-    .status({BUSY_REG,DONE_REG,VALID_REG} | APB_STATUS),
+    .status(APB_STATUS),
     .result(APB_RESULT)
 );
 

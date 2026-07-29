@@ -115,13 +115,15 @@ always @(posedge clk or negedge rst_n) begin
         //     endcase
         // end
         begin
-            STATUS <= {23'b0, alu_eq, alu_gt, alu_zero, alu_overflow, alu_negative, alu_carry, alu_busy, alu_valid,alu_done};
-            RESULT <= {24'd0, alu_result};
             if(alu_done) begin  CTRL   <= 2'b00; end
         end
     end 
 end
 
+always @(*) begin 
+    STATUS = {23'b0, alu_eq, alu_gt, alu_zero, alu_overflow, alu_negative, alu_carry, alu_busy, alu_valid,alu_done};
+    RESULT = {24'd0, alu_result};
+end 
 
 always @(*) begin
     // Default assignment to prevent latches

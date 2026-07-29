@@ -71,6 +71,7 @@ module tb_top;
         // 3. Start the UVM Test
         // UVM will look at the +UVM_TESTNAME command line argument to decide which test to run.
         run_test("alu_reg_test");
+        // run_test("alu_reset_test");
     end
     initial begin
     #1;  // Small delay to ensure proper execution

@@ -62,8 +62,10 @@ class apb_driver #(parameter WIDTH = 8) extends uvm_driver #(transaction #(WIDTH
         @(vif.drv_cb); 
         vif.drv_cb.PENABLE <= 1'b1;
         
-        // Wait until PREADY goes high to indicate completion
-        wait (vif.drv_cb.PREADY === 1'b1);
+        // Wait for the next clock edge, then check PREADY
+        do begin
+            @(vif.drv_cb);
+        end while (vif.drv_cb.PREADY !== 1'b1);
         
         // Capture read data if this was a read transaction
         if (!req.pwrite) begin
@@ -73,7 +75,7 @@ class apb_driver #(parameter WIDTH = 8) extends uvm_driver #(transaction #(WIDTH
         
         // ==============================================
         // CLEANUP (Back to IDLE)
-        @(vif.drv_cb);
+        // @(vif.drv_cb);
         vif.drv_cb.PSEL    <= 1'b0;
         vif.drv_cb.PENABLE <= 1'b0;
         vif.drv_cb.PWRITE  <= 1'b0;

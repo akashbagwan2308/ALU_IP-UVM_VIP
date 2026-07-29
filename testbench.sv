@@ -49,7 +49,7 @@ end
 // --------------------------------------------------------
 initial begin
     $dumpfile("dump.vcd");
-    $dumpvars(1, test);
+    $dumpvars(0, test);
 
     SEL     = 0;
     ENABlE  = 0;
