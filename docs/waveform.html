@@ -34,7 +34,7 @@
         }
         
         #signal-list {
-            width: 240px;
+            width: 240px; 
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
@@ -215,7 +215,7 @@
         <div class="flex flex-wrap items-center gap-2">
             <input type="file" id="vcd-file-input" accept=".vcd" class="hidden" onchange="handleFileUpload(event)">
 
-            <button onclick="autoLoadVCD()" class="px-2.5 h-[30px] sm:h-[34px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/80 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Sync Local dump.vcd">
+            <button onclick="handleSmartSync()" class="px-2.5 h-[30px] sm:h-[34px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/80 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Sync Latest File">
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 <span class="hidden sm:inline">Sync</span>
             </button>
@@ -226,7 +226,7 @@
                 <span class="hidden lg:inline">Hierarchy</span>
             </button>
 
-            <button onclick="document.getElementById('vcd-file-input').click()" class="px-2.5 h-[30px] sm:h-[34px] bg-slate-50 dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-[#334155] rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Upload Local VCD File">
+            <button onclick="handleSmartUpload()" class="px-2.5 h-[30px] sm:h-[34px] bg-slate-50 dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-[#334155] rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Upload Local VCD File">
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                 <span class="hidden sm:inline">Upload</span>
             </button>
@@ -274,11 +274,11 @@
         <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">Please return to the LogicSilicon Simulator, ensure your testbench contains <code class="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-transparent">$dumpfile("dump.vcd"); $dumpvars;</code>, and click <strong>Run Code</strong> to generate a new waveform.</p>
         
         <div class="flex gap-3 justify-center">
-            <button onclick="autoLoadVCD()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition shadow-md flex items-center justify-center gap-2">
+            <button onclick="handleSmartSync()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition shadow-md flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Sync dump.vcd
             </button>
-            <button onclick="document.getElementById('vcd-file-input').click()" class="px-5 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold transition shadow-md flex items-center justify-center gap-2">
+            <button onclick="handleSmartUpload()" class="px-5 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold transition shadow-md flex items-center justify-center gap-2">
                 Browse Manual
             </button>
         </div>
@@ -357,12 +357,9 @@
                 <!-- Dynamic Search Results -->
             </div>
             <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-[#0f172a] rounded-b-xl shrink-0">
-                <button onclick="addAllSignalsToGroup()" class="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-bold transition shadow-sm">
-                    Add ALL
-                </button>
                 <button onclick="addSearchedSignalsToGroup()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-sm flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Add SEARCHED Only
+                    Add All Matches
                 </button>
             </div>
         </div>
@@ -380,6 +377,7 @@
         const waveHeight = 24;
         const paddingY = (rowHeight - waveHeight) / 2;
         
+        // Fast hover paradigm state
         let hoverTime = 0;   
         let anchorTime = null; 
         
@@ -392,6 +390,7 @@
         let showFullPath = false;
 
         let targetGroupIdForSearch = null; // null indicates appending directly to the root canvas level
+        let currentFileHandle = null; // Stores the local file reference for Smart Sync
 
         const waveCanvas = document.getElementById('wave-canvas');
         const cursorCanvas = document.getElementById('cursor-canvas');
@@ -478,37 +477,39 @@
             return flat;
         }
 
+        // --- NEW HELPER: PROCESS AND RENDER ---
+        function processAndRenderVCD(vcdContent) {
+            parsedData = { signals: [], maxTime: 0, timescale: '1s' };
+            visibleSignals = [];
+            hoverTime = 0;
+            anchorTime = null;
+            
+            parseVCD(vcdContent);
+            
+            document.getElementById('error-msg').classList.add('hidden');
+            document.getElementById('viewer-container').classList.remove('hidden');
+            
+            visibleSignals = parsedData.signals.map(s => ({ type: 'signal', signal: s, parentGroupId: null }));
+            document.getElementById('timescale-display').innerText = `Timescale: ${parsedData.timescale}`;
+
+            let startingWidth = wrapper.clientWidth;
+            if (startingWidth === 0) startingWidth = window.innerWidth - document.getElementById('signal-list').clientWidth; 
+            
+            scale = (startingWidth - 50 - paddingX) / Math.max(1, parsedData.maxTime);
+            if (scale > 50) scale = 50;
+
+            initRenderer();
+            setupSidebarResizer();
+            requestAnimationFrame(() => { fitToScreen(); });
+        }
+
         // --- AUTO-LOAD VCD LOGIC ---
         async function autoLoadVCD() {
             try {
                 const response = await fetch('dump.vcd?t=' + new Date().getTime());
                 if (!response.ok) throw new Error("File not found");
-                
                 const vcdContent = await response.text();
-                
-                parsedData = { signals: [], maxTime: 0, timescale: '1s' };
-                visibleSignals = [];
-                hoverTime = 0;
-                anchorTime = null;
-                
-                parseVCD(vcdContent);
-                
-                document.getElementById('error-msg').classList.add('hidden');
-                document.getElementById('viewer-container').classList.remove('hidden');
-                
-                visibleSignals = parsedData.signals.map(s => ({ type: 'signal', signal: s, parentGroupId: null }));
-                document.getElementById('timescale-display').innerText = `Timescale: ${parsedData.timescale}`;
-
-                let startingWidth = wrapper.clientWidth;
-                if (startingWidth === 0) startingWidth = window.innerWidth - document.getElementById('signal-list').clientWidth; 
-                
-                scale = (startingWidth - 50 - paddingX) / Math.max(1, parsedData.maxTime);
-                if (scale > 50) scale = 50;
-
-                initRenderer();
-                setupSidebarResizer();
-                requestAnimationFrame(() => { fitToScreen(); });
-                
+                processAndRenderVCD(vcdContent);
             } catch (error) {
                 console.log("Auto-load failed. Is dump.vcd in the same folder?", error);
                 document.getElementById('error-msg').classList.remove('hidden');
@@ -518,7 +519,47 @@
 
         window.onload = () => {
             initTheme();
-            autoLoadVCD();
+            autoLoadVCD(); // Attempt automatic load immediately
+        };
+
+        window.handleSmartUpload = async function() {
+            if ('showOpenFilePicker' in window) {
+                try {
+                    const [fileHandle] = await window.showOpenFilePicker({
+                        types: [{
+                            description: 'VCD Waveform Files',
+                            accept: { '*/*': ['.vcd'] }
+                        }],
+                        multiple: false
+                    });
+                    
+                    currentFileHandle = fileHandle; 
+                    
+                    const file = await fileHandle.getFile();
+                    const vcdContent = await file.text();
+                    processAndRenderVCD(vcdContent);
+                } catch (error) {
+                    console.log("File selection cancelled or failed", error);
+                }
+            } else {
+                document.getElementById('vcd-file-input').click();
+            }
+        };
+
+        window.handleSmartSync = async function() {
+            if (currentFileHandle) {
+                try {
+                    const file = await currentFileHandle.getFile();
+                    const vcdContent = await file.text();
+                    processAndRenderVCD(vcdContent);
+                } catch (error) {
+                    console.error("Failed to read the stored file. Permissions may have dropped.", error);
+                    alert("Lost permission to read the file. Please upload it again.");
+                    currentFileHandle = null;
+                }
+            } else {
+                autoLoadVCD();
+            }
         };
 
         window.handleFileUpload = function(event) {
@@ -528,29 +569,8 @@
             
             reader.onload = function(e) {
                 const vcdContent = e.target.result;
-                
-                parsedData = { signals: [], maxTime: 0, timescale: '1s' };
-                visibleSignals = [];
-                hoverTime = 0;
-                anchorTime = null;
-                
-                parseVCD(vcdContent);
-                
-                document.getElementById('error-msg').classList.add('hidden');
-                document.getElementById('viewer-container').classList.remove('hidden');
-                
-                visibleSignals = parsedData.signals.map(s => ({ type: 'signal', signal: s, parentGroupId: null }));
-                document.getElementById('timescale-display').innerText = `Timescale: ${parsedData.timescale}`;
-
-                let startingWidth = wrapper.clientWidth;
-                if (startingWidth === 0) startingWidth = window.innerWidth - document.getElementById('signal-list').clientWidth; 
-                
-                scale = (startingWidth - 50 - paddingX) / Math.max(1, parsedData.maxTime);
-                if (scale > 50) scale = 50;
-
-                initRenderer();
-                setupSidebarResizer();
-                requestAnimationFrame(() => { fitToScreen(); });
+                currentFileHandle = null; // Clear handle if legacy fallback is used
+                processAndRenderVCD(vcdContent);
             };
 
             reader.readAsText(file);
@@ -624,9 +644,9 @@
 
                 if (line.startsWith('#')) {
                     currentTime = parseInt(line.substring(1));
-                } else if (/^[01xzXZbB]/.test(line)) {
+                } else if (/^[01xzXZbB]/.test(line) || line.startsWith('s') || line.startsWith('S') || line.startsWith('r') || line.startsWith('R')) {
                     let valStr = ''; let id = '';
-                    if (line.startsWith('b') || line.startsWith('B')) {
+                    if (line.startsWith('b') || line.startsWith('B') || line.startsWith('s') || line.startsWith('S') || line.startsWith('r') || line.startsWith('R')) {
                         const parts = line.split(/\s+/);
                         valStr = parts[0].substring(1); id = parts[1];
                     } else {
@@ -733,8 +753,8 @@
                             <span class="text-slate-800 dark:text-indigo-200 truncate font-semibold text-xs" title="${sig.name}">${displayName}</span>
                         </div>
                         <div class="flex items-center gap-1 pointer-events-auto shrink-0">
-                            <div id="val-badge-${index}" class="sig-val ${getValueClass(initVal, sig.size)} pointer-events-none">
-                                ${formatDisplayValue(initVal, sig.size)}
+                            <div id="val-badge-${index}" class="sig-val ${getValueClass(initVal, sig.size, sig.name)} pointer-events-none">
+                                ${formatDisplayValue(initVal, sig.size, sig.name)}
                             </div>
                             <button onclick="event.stopPropagation(); removeItem(${index})" class="remove-btn text-slate-400 hover:text-red-500 p-0.5" title="Hide Trace">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -911,7 +931,7 @@
             document.getElementById('signal-search-input').value = '';
             document.getElementById('signal-search-modal').classList.remove('hidden');
             filterSearchModal();
-            document.getElementById('signal-search-input').focus();
+            setTimeout(() => document.getElementById('signal-search-input').focus(), 50);
         };
 
         window.closeSearchModal = function() {
@@ -954,7 +974,13 @@
                 const groupIndex = visibleSignals.findIndex(i => i.type === 'group' && i.id === groupId);
                 if (groupIndex !== -1) {
                     const newItems = signalsArr.map(sig => ({ type: 'signal', signal: sig, parentGroupId: groupId }));
-                    visibleSignals.splice(groupIndex + 1, 0, ...newItems);
+                    
+                    // Find insertion index at the end of the current group
+                    let insertIdx = groupIndex + 1;
+                    while (insertIdx < visibleSignals.length && visibleSignals[insertIdx].parentGroupId === groupId) {
+                        insertIdx++;
+                    }
+                    visibleSignals.splice(insertIdx, 0, ...newItems);
                 }
             } else {
                 // No group provided - append to root level
@@ -964,17 +990,14 @@
             initRenderer();
         }
 
-        window.addAllSignalsToGroup = function() {
-            // Append EVERYTHING available in the VCD dump (respecting current group/root context)
-            appendSignalsToGroupList(parsedData.signals, targetGroupIdForSearch);
-            closeSearchModal();
-        };
-
         window.addSearchedSignalsToGroup = function() {
             const query = document.getElementById('signal-search-input').value.toLowerCase();
-            const filtered = parsedData.signals.filter(s => s.name.toLowerCase().includes(query));
+            let toAdd = parsedData.signals;
+            if (query.trim() !== '') {
+                toAdd = parsedData.signals.filter(s => s.name.toLowerCase().includes(query));
+            }
             // Append only filtered matches (respecting current group/root context)
-            appendSignalsToGroupList(filtered, targetGroupIdForSearch);
+            appendSignalsToGroupList(toAdd, targetGroupIdForSearch);
             closeSearchModal();
         };
 
@@ -1030,13 +1053,22 @@
             draw();
         }
 
-        function formatDisplayValue(val, size) {
-            if (val.toLowerCase().includes('x')) return 'X';
-            if (val.toLowerCase().includes('z')) return 'Z';
-            if (size === 1) return val;
+        function formatDisplayValue(val, size, name = '') {
+            let strVal = String(val);
+            let shortName = String(name).split('.').pop().toLowerCase();
             
-            if (/^[01]+$/.test(val)) {
-                let paddedVal = val.padStart(size, '0');
+            if (shortName.includes('assert')) {
+                if (strVal === '10' || strVal === '2' || (strVal === '1' && shortName.includes('pass'))) return 'PASS';
+                if (strVal === '11' || strVal === '3' || (strVal === '1' && shortName.includes('fail'))) return 'FAIL';
+                if (strVal === '00' || strVal === '0') return '0';
+            }
+
+            if (strVal.toLowerCase().includes('x')) return 'X';
+            if (strVal.toLowerCase().includes('z')) return 'Z';
+            if (size === 1) return strVal;
+            
+            if (/^[01]+$/.test(strVal)) {
+                let paddedVal = strVal.padStart(size, '0');
 
                 if (globalRadix === 'hex') {
                     let hexChars = Math.ceil(size / 4);
@@ -1054,14 +1086,23 @@
                     return 'o' + parseInt(paddedVal, 2).toString(8).padStart(octChars, '0');
                 }
             }
-            return val;
+            return strVal;
         }
 
-        function getValueClass(val, size) {
-            if (val.toLowerCase().includes('x')) return 'val-x';
-            if (val.toLowerCase().includes('z')) return 'val-z';
+        function getValueClass(val, size, name = '') {
+            let sVal = String(val).toLowerCase();
+            let shortName = String(name).split('.').pop().toLowerCase();
+            
+            if (shortName.includes('assert')) {
+                if (sVal === '11' || sVal === '3' || (sVal === '1' && shortName.includes('fail'))) return 'val-x'; 
+                if (sVal === '10' || sVal === '2' || (sVal === '1' && shortName.includes('pass'))) return 'val-1';
+                return 'val-0';
+            }
+
+            if (sVal.toLowerCase().includes('x')) return 'val-x';
+            if (sVal.toLowerCase().includes('z')) return 'val-z';
             if (size > 1) return 'val-bus';
-            if (val === '1') return 'val-1';
+            if (sVal === '1') return 'val-1';
             return 'val-0';
         }
 
@@ -1080,7 +1121,7 @@
             const resizer = document.getElementById('sidebar-resizer');
             const sidebar = document.getElementById('signal-list');
             
-            if (!resizer) return;
+            if (!resizer) return; // guard if already setup
             let isResizing = false;
 
             resizer.addEventListener('mousedown', (e) => {
@@ -1162,8 +1203,8 @@
                 const val = getValueAtTime(item.signal, hoverTime);
                 const badge = document.getElementById(`val-badge-${index}`);
                 if (badge) {
-                    badge.innerText = formatDisplayValue(val, item.signal.size);
-                    badge.className = `sig-val ${getValueClass(val, item.signal.size)} pointer-events-none`;
+                    badge.innerText = formatDisplayValue(val, item.signal.size, item.signal.name);
+                    badge.className = `sig-val ${getValueClass(val, item.signal.size, item.signal.name)} pointer-events-none`;
                 }
             });
         }
@@ -1348,70 +1389,100 @@
                     if (xStart >= xEnd) continue;
 
                     const val = trans.val;
-                    const isUnknown = val.toLowerCase().includes('x');
-                    const isHighZ = val.toLowerCase().includes('z');
+                    const isUnknown = String(val).toLowerCase().includes('x');
+                    const isHighZ = String(val).toLowerCase().includes('z');
 
-                    if (sig.size === 1) {
-                        let yLine;
-                        if (val === '1') { 
-                            yLine = yTop; 
-                            waveCtx.strokeStyle = theme.val1; 
-                            waveCtx.fillStyle = theme.val1Fill;
-                            waveCtx.fillRect(xStart, yTop, xEnd - xStart, waveHeight);
-                        } 
-                        else if (val === '0') { yLine = yBottom; waveCtx.strokeStyle = theme.val0; } 
-                        else if (isUnknown) { 
-                            yLine = yMid; waveCtx.strokeStyle = theme.valX;
-                            waveCtx.fillStyle = theme.valXFill;
-                            waveCtx.fillRect(xStart, yTop, xEnd - xStart, waveHeight);
-                        } 
-                        else { yLine = yMid; waveCtx.strokeStyle = theme.valZ; } 
+                    let shortName = sig.name.split('.').pop().toLowerCase();
+                    let isAssertionTrack = shortName.includes('assert');
 
-                        waveCtx.beginPath();
-                        waveCtx.moveTo(xStart, yLine); waveCtx.lineTo(xEnd, yLine);
-                        waveCtx.stroke();
+                    if (isAssertionTrack) {
+                        // DEDICATED SINGLE-TRACK ASSERTION ARROW RENDERER
+                        let isPassSignal = (val === '10' || val === '2' || (val === '1' && shortName.includes('pass')));
+                        let isFailSignal = (val === '11' || val === '3' || (val === '1' && shortName.includes('fail')));
 
-                        if (i > 0) {
-                            const prevVal = sig.transitions[i-1].val;
-                            if (prevVal !== val && trans.time > 0) {
-                                let prevYLine = prevVal === '1' ? yTop : (prevVal === '0' ? yBottom : yMid);
-                                waveCtx.beginPath();
-                                waveCtx.moveTo(xStart, prevYLine); waveCtx.lineTo(xStart, yLine);
-                                waveCtx.stroke();
-                            }
-                        }
-                    } else {
-                        if (isUnknown) { waveCtx.strokeStyle = theme.valX; waveCtx.fillStyle = theme.valXFill; } 
-                        else if (isHighZ) { waveCtx.strokeStyle = theme.valZ; waveCtx.fillStyle = 'transparent'; } 
-                        else { waveCtx.strokeStyle = theme.valBus; waveCtx.fillStyle = 'transparent'; }
+                        if (isPassSignal || isFailSignal) {
+                            let midX = xStart + (xEnd - xStart) / 2;
+                            if (xEnd - xStart > 12) midX = xStart + 6; 
 
-                        if (xEnd - xStart > 4) {
-                            waveCtx.beginPath();
-                            waveCtx.moveTo(xStart, yMid);
-                            waveCtx.lineTo(xStart + 3, yTop); waveCtx.lineTo(xEnd - 3, yTop);
-                            waveCtx.lineTo(xEnd, yMid);
-                            waveCtx.lineTo(xEnd - 3, yBottom); waveCtx.lineTo(xStart + 3, yBottom);
-                            waveCtx.closePath();
+                            waveCtx.lineWidth = 2.0;
                             
-                            if (isUnknown) waveCtx.fill();
+                            if (isPassSignal) {
+                                waveCtx.strokeStyle = '#10b981'; waveCtx.fillStyle = '#10b981';
+                                waveCtx.beginPath(); waveCtx.moveTo(midX, yBottom); waveCtx.lineTo(midX, yTop + 3); waveCtx.stroke();
+                                waveCtx.beginPath(); waveCtx.moveTo(midX - 4, yTop + 5); waveCtx.lineTo(midX + 4, yTop + 5); waveCtx.lineTo(midX, yTop - 1); waveCtx.fill();
+                            } else {
+                                waveCtx.strokeStyle = '#ef4444'; waveCtx.fillStyle = '#ef4444';
+                                waveCtx.beginPath(); waveCtx.moveTo(midX, yTop); waveCtx.lineTo(midX, yBottom - 3); waveCtx.stroke();
+                                waveCtx.beginPath(); waveCtx.moveTo(midX - 4, yBottom - 5); waveCtx.lineTo(midX + 4, yBottom - 5); waveCtx.lineTo(midX, yBottom + 1); waveCtx.fill();
+                            }
+                        } 
+                        // Intentionally completely blank otherwise (no baseline for 0 or 00)
+                    } else {
+                        // STANDARD SIGNAL PULSE RENDERER WITH FIXED EDGE COLORING
+                        if (sig.size === 1 && String(val).length === 1) {
+                            let yLine;
+                            if (val === '1') { 
+                                yLine = yTop; waveCtx.strokeStyle = theme.val1; waveCtx.fillStyle = theme.val1Fill;
+                                waveCtx.fillRect(xStart, yTop, xEnd - xStart, waveHeight);
+                            } 
+                            else if (val === '0') { yLine = yBottom; waveCtx.strokeStyle = theme.val0; } 
+                            else if (isUnknown) { 
+                                yLine = yMid; waveCtx.strokeStyle = theme.valX; waveCtx.fillStyle = theme.valXFill;
+                                waveCtx.fillRect(xStart, yTop, xEnd - xStart, waveHeight);
+                            } 
+                            else { yLine = yMid; waveCtx.strokeStyle = theme.valZ; } 
+
+                            waveCtx.beginPath();
+                            waveCtx.moveTo(xStart, yLine); waveCtx.lineTo(xEnd, yLine);
                             waveCtx.stroke();
 
-                            if (xEnd - xStart > 25) {
-                                waveCtx.fillStyle = isUnknown ? theme.busTextX : theme.busTextVal;
-                                let displayVal = formatDisplayValue(val, sig.size);
-                                
-                                waveCtx.save();
-                                waveCtx.beginPath();
-                                waveCtx.rect(xStart + 4, yTop, xEnd - xStart - 8, waveHeight);
-                                waveCtx.clip();
-                                waveCtx.fillText(displayVal, xStart + (xEnd - xStart)/2, yMid);
-                                waveCtx.restore();
+                            if (i > 0) {
+                                const prevVal = sig.transitions[i-1].val;
+                                if (prevVal !== val && trans.time > 0) {
+                                    let prevYLine = prevVal === '1' ? yTop : (prevVal === '0' ? yBottom : yMid);
+                                    waveCtx.beginPath();
+                                    
+                                    if (val === '1' || prevVal === '1') waveCtx.strokeStyle = theme.val1;
+                                    else if (val === 'x' || prevVal === 'x') waveCtx.strokeStyle = theme.valX;
+                                    else waveCtx.strokeStyle = theme.val0;
+
+                                    waveCtx.moveTo(xStart, prevYLine); waveCtx.lineTo(xStart, yLine);
+                                    waveCtx.stroke();
+                                }
                             }
                         } else {
-                            waveCtx.beginPath();
-                            waveCtx.moveTo(xStart, yTop); waveCtx.lineTo(xEnd, yTop);
-                            waveCtx.moveTo(xStart, yBottom); waveCtx.lineTo(xEnd, yBottom);
-                            waveCtx.stroke();
+                            if (isUnknown) { waveCtx.strokeStyle = theme.valX; waveCtx.fillStyle = theme.valXFill; } 
+                            else if (isHighZ) { waveCtx.strokeStyle = theme.valZ; waveCtx.fillStyle = 'transparent'; } 
+                            else { waveCtx.strokeStyle = theme.valBus; waveCtx.fillStyle = 'transparent'; }
+
+                            if (xEnd - xStart > 4) {
+                                waveCtx.beginPath();
+                                waveCtx.moveTo(xStart, yMid);
+                                waveCtx.lineTo(xStart + 3, yTop); waveCtx.lineTo(xEnd - 3, yTop);
+                                waveCtx.lineTo(xEnd, yMid);
+                                waveCtx.lineTo(xEnd - 3, yBottom); waveCtx.lineTo(xStart + 3, yBottom);
+                                waveCtx.closePath();
+                                
+                                if (isUnknown) waveCtx.fill();
+                                waveCtx.stroke();
+
+                                if (xEnd - xStart > 25) {
+                                    waveCtx.fillStyle = isUnknown ? theme.busTextX : theme.busTextVal;
+                                    let displayVal = formatDisplayValue(val, sig.size, sig.name);
+                                    
+                                    waveCtx.save();
+                                    waveCtx.beginPath();
+                                    waveCtx.rect(xStart + 4, yTop, xEnd - xStart - 8, waveHeight);
+                                    waveCtx.clip();
+                                    waveCtx.fillText(displayVal, xStart + (xEnd - xStart)/2, yMid);
+                                    waveCtx.restore();
+                                }
+                            } else {
+                                waveCtx.beginPath();
+                                waveCtx.moveTo(xStart, yTop); waveCtx.lineTo(xEnd, yTop);
+                                waveCtx.moveTo(xStart, yBottom); waveCtx.lineTo(xEnd, yBottom);
+                                waveCtx.stroke();
+                            }
                         }
                     }
                 }
@@ -1498,8 +1569,18 @@
                 exCtx.fillText(displayName, 38 + indent, rowY + rowHeight/2);
 
                 const val = getValueAtTime(item.signal, hoverTime);
-                const displayVal = formatDisplayValue(val, item.signal.size);
+                const displayVal = formatDisplayValue(val, item.signal.size, item.signal.name);
                 exCtx.fillStyle = isDarkMode ? '#3b82f6' : '#2563eb';
+                
+                let sVal = String(val).toLowerCase();
+                let nVal = shortName.toLowerCase();
+
+                if (nVal.includes('assert')) {
+                    if (sVal === '11' || sVal === '3' || (sVal === '1' && nVal.includes('fail'))) exCtx.fillStyle = '#ef4444';
+                    else if (sVal === '10' || sVal === '2' || (sVal === '1' && nVal.includes('pass'))) exCtx.fillStyle = '#10b981';
+                    else exCtx.fillStyle = isDarkMode ? '#64748b' : '#94a3b8';
+                }
+
                 exCtx.font = 'bold 11px "Fira Code"';
                 exCtx.textAlign = 'right';
                 exCtx.fillText(displayVal, sidebarWidth - 12, rowY + rowHeight/2);
