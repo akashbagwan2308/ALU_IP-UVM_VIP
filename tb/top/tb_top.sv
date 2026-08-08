@@ -90,16 +90,29 @@ module tb_top;
 
         // 3. Start the UVM Test
         // UVM will look at the +UVM_TESTNAME command line argument to decide which test to run.
+        // Or you can hardcode one by uncommenting it below.
+        
+        // --- Original Tests ---
         // run_test("alu_reg_test");
         // run_test("alu_reset_test");
         // run_test("alu_stress_test");
         // run_test("alu_smoke_test");
-        run_test("alu_random_test");
+        // run_test("alu_random_test");
+
+        // --- Built-in UVM RAL Tests ---
+        // run_test("alu_ral_hw_reset_test");
+        // run_test("alu_ral_bit_bash_test");
+        // run_test("alu_ral_access_test");
+
+        // --- Custom RAL Tests ---
+        // run_test("alu_custom_ral_test");
+        run_test("alu_advanced_ral_test"); 
     end
+    
     initial begin
-    #1;  // Small delay to ensure proper execution
-    $display("*********************Topology******************************");
-    uvm_top.print_topology();
-  end
+        #1;  // Small delay to ensure proper execution
+        $display("*********************Topology******************************");
+        uvm_top.print_topology();
+    end
 
 endmodule

@@ -44,6 +44,9 @@
 `include "sequences/alu_sub_sequence.sv"
 `include "sequences/alu_mul_sequence.sv"
 `include "sequences/alu_random_sequence.sv"
+`include "sequences/alu_ral_sanity_sequence.sv"
+`include "sequences/alu_ral_random_sequence.sv"
+`include "sequences/alu_advanced_ral_sequence.sv"
 
 `include "tests/base_test.sv"
 `include "tests/alu_smoke_test.sv"
@@ -51,3 +54,8 @@
 `include "tests/alu_reg_test.sv"
 `include "tests/alu_reset_test.sv"
 `include "tests/alu_stress_test.sv"
+`include "tests/alu_ral_hw_reset_test.sv"
+`include "tests/alu_ral_bit_bash_test.sv"
+`include "tests/alu_ral_access_test.sv"
+`include "tests/alu_custom_ral_test.sv"
+`include "tests/alu_advanced_ral_test.sv"

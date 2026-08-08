@@ -22,12 +22,33 @@ class alu_reg_test extends base_test;
         `uvm_info("REG_TEST", "--- STARTING REGISTER INTEGRITY TEST ---", UVM_LOW)
         
         foreach (patterns[i]) begin
-            // 1. Write to OPERAND_A
+        
+            // ---------------------------------------------------------
+            // 1. Write to OPCODE (Assuming base address 8'h00)
+            // Note: If OPCODE is strictly a 4-bit register in the RTL, 
+            // you may need to apply a mask: patterns[i] & 8'h0F
+            // ---------------------------------------------------------
+            wr_seq.addr = 8'h00; 
+            wr_seq.data = patterns[i];
+            wr_seq.start(env.v_sqr.apb_seqr);
+            
+            // 2. Read back OPCODE
+            rd_seq.addr = 8'h00;
+            rd_seq.start(env.v_sqr.apb_seqr);
+            
+            if (rd_seq.read_data !== patterns[i])
+                `uvm_error("REG_TEST", $sformatf("Mismatch on OPCODE! Wrote: 0x%0h, Read: 0x%0h", patterns[i], rd_seq.read_data))
+            else
+                `uvm_info("REG_TEST", $sformatf("OPCODE matched pattern 0x%0h", patterns[i]), UVM_LOW)
+
+            // ---------------------------------------------------------
+            // 3. Write to OPERAND_A
+            // ---------------------------------------------------------
             wr_seq.addr = 8'h04; 
             wr_seq.data = patterns[i];
             wr_seq.start(env.v_sqr.apb_seqr);
             
-            // 2. Read back OPERAND_A
+            // 4. Read back OPERAND_A
             rd_seq.addr = 8'h04;
             rd_seq.start(env.v_sqr.apb_seqr);
             
@@ -36,12 +57,14 @@ class alu_reg_test extends base_test;
             else
                 `uvm_info("REG_TEST", $sformatf("OPERAND_A matched pattern 0x%0h", patterns[i]), UVM_LOW)
                 
-            // 3. Write to OPERAND_B
+            // ---------------------------------------------------------
+            // 5. Write to OPERAND_B
+            // ---------------------------------------------------------
             wr_seq.addr = 8'h08; 
             wr_seq.data = patterns[i];
             wr_seq.start(env.v_sqr.apb_seqr);
             
-            // 4. Read back OPERAND_B
+            // 6. Read back OPERAND_B
             rd_seq.addr = 8'h08;
             rd_seq.start(env.v_sqr.apb_seqr);
             
