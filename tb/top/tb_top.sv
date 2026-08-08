@@ -97,7 +97,7 @@ module tb_top;
         // run_test("alu_reset_test");
         // run_test("alu_stress_test");
         // run_test("alu_smoke_test");
-        // run_test("alu_random_test");
+        run_test("alu_random_test");
 
         // --- Built-in UVM RAL Tests ---
         // run_test("alu_ral_hw_reset_test");
@@ -106,7 +106,7 @@ module tb_top;
 
         // --- Custom RAL Tests ---
         // run_test("alu_custom_ral_test");
-        run_test("alu_advanced_ral_test"); 
+        // run_test("alu_advanced_ral_test"); 
     end
     
     initial begin

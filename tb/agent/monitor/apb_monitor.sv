@@ -57,6 +57,7 @@ class apb_monitor #(parameter WIDTH = 8) extends uvm_monitor;
                 
                 // Broadcast the cloned transaction out through the analysis port
                 item_collected_port.write(trans);
+                
             end
         end
     endtask

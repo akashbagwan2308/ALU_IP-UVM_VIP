@@ -106,7 +106,8 @@ class alu_env #(parameter WIDTH = 8) extends uvm_env;
             regmodel.default_map.set_sequencer(v_sqr.apb_seqr, reg_adapter);
             
             // 2. Disable auto-prediction since we are using an explicit predictor
-            regmodel.default_map.set_auto_predict(0);
+            // regmodel.default_map.set_auto_predict(0);
+            regmodel.default_map.set_auto_predict(1);
             
             // 3. Connect the Predictor to the map and adapter
             reg_predictor.map = regmodel.default_map;
@@ -114,7 +115,7 @@ class alu_env #(parameter WIDTH = 8) extends uvm_env;
             
             // 4. Connect the Predictor to the Agent's Monitor Analysis Port
             // This allows the predictor to observe all APB traffic and update the mirror passively
-            apb_agt.ap.connect(reg_predictor.bus_in);
+            // apb_agt.ap.connect(reg_predictor.bus_in);
         end else begin
             `uvm_fatal("RAL_ERR", "default_map is null in regmodel!")
         end
